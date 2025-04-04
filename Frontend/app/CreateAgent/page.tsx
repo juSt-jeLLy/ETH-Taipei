@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Check,
@@ -23,35 +24,36 @@ const mcpOptions = [
   {
     id: 1,
     name: "Ethereum",
-    icon: "/Frontend/images.png",
+    icon: "/images.png",
     description: "Main Ethereum network",
   },
   {
     id: 2,
     name: "Polygon",
-    icon: "/Frontend/images.png",
+    icon: "/images.png",
     description: "Scalable Ethereum solution",
   },
   {
     id: 3,
     name: "Arbitrum",
-    icon: "/Frontend/images.png",
+    icon: "/images.png",
     description: "Layer 2 scaling solution",
   },
   {
     id: 4,
     name: "Optimism",
-    icon: "/Frontend/images.png",
+    icon: "/images.png",
     description: "Optimistic rollup solution",
   },
   {
     id: 5,
     name: "Base",
-    icon: "/Frontend/images.png",
+    icon: "/images.png",
     description: "Coinbase L2 solution",
   },
 ];
 export default function CreateAgent() {
+  const router = useRouter();
   const [agentName, setAgentName] = useState("");
   const [invocationType, setInvocationType] = useState("ping");
   const [selectedMCPs, setSelectedMCPs] = useState<number[]>([]);
@@ -68,19 +70,10 @@ export default function CreateAgent() {
   const handleCreateAgent = () => {
     if (!agentName || selectedMCPs.length === 0) return;
 
-    setIsCreating(true);
-
-    // Simulate creation process
-    setTimeout(() => {
-      // Reset form
-      setAgentName("");
-      setInvocationType("ping");
-      setSelectedMCPs([]);
-      setIsCreating(false);
-
-      // Show success message or notification here
-      alert("Agent created successfully!");
-    }, 1500);
+    // Instead of creating the agent directly, navigate to the API keys page
+    // with the current selections as query parameters
+    const selectedMCPsString = selectedMCPs.join(',');
+    router.push(`/CreateAgent/api-keys?name=${encodeURIComponent(agentName)}&type=${invocationType}&mcps=${selectedMCPsString}`);
   };
 
   return (
@@ -95,20 +88,8 @@ export default function CreateAgent() {
         <div className="relative z-10">
           {/* Replace the old header with NavBar */}
           <NavBar />
-
-          {/* Back button can be added below the navbar if needed */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-            <Link href="/">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              >
-                <ArrowLeft size={16} />
-                Back to Home
-              </motion.button>
-            </Link>
-          </div>
+          
+          {/* Removed the back button from here */}
         </div>
       </header>
       {/* Main Content */}
@@ -228,22 +209,7 @@ export default function CreateAgent() {
                         : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                   >
-                    <div className="w-5 h-5 flex-shrink-0">
-                      {selectedMCPs.includes(mcp.id) ? (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-5 h-5 bg-gray-800 dark:bg-gray-200 rounded-sm flex items-center justify-center"
-                        >
-                          <Check
-                            size={14}
-                            className="text-white dark:text-gray-900"
-                          />
-                        </motion.div>
-                      ) : (
-                        <div className="w-5 h-5 border border-gray-300 dark:border-gray-600 rounded-sm" />
-                      )}
-                    </div>
+                    {/* Removed the checkbox here */}
                     <div className="flex items-center gap-3 flex-1">
                       <motion.div
                         className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 p-1"
@@ -278,29 +244,43 @@ export default function CreateAgent() {
               </div>
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleCreateAgent}
-              disabled={!agentName || selectedMCPs.length === 0 || isCreating}
-              className={`w-full py-4 rounded-lg flex items-center justify-center gap-2 font-medium mt-6 ${
-                !agentName || selectedMCPs.length === 0 || isCreating
-                  ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
-              }`}
-            >
-              {isCreating ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Creating Agent...</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={18} />
-                  <span>Create Agent</span>
-                </>
-              )}
-            </motion.button>
+            {/* Button row with back and next buttons side by side with space between */}
+            <div className="flex justify-between items-center gap-8 mt-6">
+              <Link href="/" className="w-1/4">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-4 rounded-lg flex items-center justify-center gap-2 font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                >
+                  <ArrowLeft size={18} />
+                  <span>Back</span>
+                </motion.button>
+              </Link>
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCreateAgent}
+                disabled={!agentName || selectedMCPs.length === 0 || isCreating}
+                className={`w-1/4 py-4 rounded-lg flex items-center justify-center gap-2 font-medium ${
+                  !agentName || selectedMCPs.length === 0 || isCreating
+                    ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
+                }`}
+              >
+                {isCreating ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={18} />
+                    <span>Next</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -311,8 +291,8 @@ export default function CreateAgent() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
               <Image
-                src="/Frontend/images.png"
-                alt="ETH Taipei AI Agents"
+                src="/images.png"
+                alt=""
                 width={32}
                 height={32}
               />

@@ -13,7 +13,7 @@ import {
   Zap,
   Globe,
   Code,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import NavBar from "./components/NavBar";
 
@@ -26,11 +26,11 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600" />
           <div className="absolute w-full h-full bg-[url('/grid-pattern.svg')] bg-center" />
         </div>
-        
+
         <div className="relative z-10">
           {/* Replace the old header with NavBar */}
           <NavBar />
-          
+
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pt-12 md:pb-32">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <motion.div
@@ -45,7 +45,8 @@ export default function Home() {
                   </span>
                 </h1>
                 <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-lg">
-                  Deploy intelligent agents that can monitor, analyze, and interact with blockchain networks automatically.
+                  Deploy intelligent agents that can monitor, analyze, and
+                  interact with blockchain networks automatically.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href="/CreateAgent">
@@ -79,7 +80,10 @@ export default function Home() {
                   </div>
                   <div className="space-y-6">
                     <div className="h-40 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <Cpu size={64} className="text-gray-400 dark:text-gray-500" />
+                      <Cpu
+                        size={64}
+                        className="text-gray-400 dark:text-gray-500"
+                      />
                     </div>
                     <div className="space-y-2">
                       <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded-full w-3/4"></div>
@@ -88,17 +92,23 @@ export default function Home() {
                     <div className="flex justify-between items-center">
                       <div className="flex space-x-2">
                         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                          <Zap size={14} className="text-blue-600 dark:text-blue-400" />
+                          <Zap
+                            size={14}
+                            className="text-blue-600 dark:text-blue-400"
+                          />
                         </div>
                         <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                          <Globe size={14} className="text-purple-600 dark:text-purple-400" />
+                          <Globe
+                            size={14}
+                            className="text-purple-600 dark:text-purple-400"
+                          />
                         </div>
                       </div>
                       <div className="h-8 w-20 bg-gray-200 dark:bg-gray-600 rounded-md"></div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 rotate-6 shadow-lg"></div>
                 <div className="absolute top-1/4 -right-8 w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 -rotate-6 shadow-lg"></div>
               </motion.div>
@@ -115,42 +125,76 @@ export default function Home() {
               Powerful Features for Web3 Automation
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              Create intelligent agents that monitor and interact with blockchain networks automatically.
+              Create intelligent agents that monitor and interact with
+              blockchain networks automatically.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                icon: <Zap size={24} className="text-blue-600 dark:text-blue-400" />,
+                icon: (
+                  <Zap size={24} className="text-blue-600 dark:text-blue-400" />
+                ),
                 title: "Real-time Monitoring",
-                description: "Monitor blockchain events, transactions, and smart contract activities in real-time."
+                description:
+                  "Monitor blockchain events, transactions, and smart contract activities in real-time.",
               },
               {
-                icon: <Globe size={24} className="text-purple-600 dark:text-purple-400" />,
+                icon: (
+                  <Globe
+                    size={24}
+                    className="text-purple-600 dark:text-purple-400"
+                  />
+                ),
                 title: "Multi-chain Support",
-                description: "Deploy agents across multiple blockchains including Ethereum, Polygon, Arbitrum and more."
+                description:
+                  "Deploy agents across multiple blockchains including Ethereum, Polygon, Arbitrum and more.",
               },
               {
-                icon: <Code size={24} className="text-green-600 dark:text-green-400" />,
+                icon: (
+                  <Code
+                    size={24}
+                    className="text-green-600 dark:text-green-400"
+                  />
+                ),
                 title: "Custom Logic",
-                description: "Define custom conditions and actions for your agents to execute automatically."
+                description:
+                  "Define custom conditions and actions for your agents to execute automatically.",
               },
               {
-                icon: <Shield size={24} className="text-red-600 dark:text-red-400" />,
+                icon: (
+                  <Shield
+                    size={24}
+                    className="text-red-600 dark:text-red-400"
+                  />
+                ),
                 title: "Secure Execution",
-                description: "All agent operations are executed securely with robust error handling."
+                description:
+                  "All agent operations are executed securely with robust error handling.",
               },
               {
-                icon: <Bot size={24} className="text-indigo-600 dark:text-indigo-400" />,
+                icon: (
+                  <Bot
+                    size={24}
+                    className="text-indigo-600 dark:text-indigo-400"
+                  />
+                ),
                 title: "AI-Powered Analysis",
-                description: "Leverage AI to analyze on-chain data and make intelligent decisions."
+                description:
+                  "Leverage AI to analyze on-chain data and make intelligent decisions.",
               },
               {
-                icon: <Cpu size={24} className="text-orange-600 dark:text-orange-400" />,
+                icon: (
+                  <Cpu
+                    size={24}
+                    className="text-orange-600 dark:text-orange-400"
+                  />
+                ),
                 title: "No-Code Interface",
-                description: "Create and manage agents through an intuitive interface without coding."
-              }
+                description:
+                  "Create and manage agents through an intuitive interface without coding.",
+              },
             ].map((feature, index) => (
               <motion.div
                 key={index}
@@ -195,7 +239,8 @@ export default function Home() {
                     Ready to create your first AI agent?
                   </h2>
                   <p className="text-gray-300 mb-6 md:mb-0 max-w-lg">
-                    Start automating your blockchain interactions with intelligent agents that work 24/7.
+                    Start automating your blockchain interactions with
+                    intelligent agents that work 24/7.
                   </p>
                 </div>
                 <Link href="/CreateAgent">
@@ -218,12 +263,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <Image
-                src="/Frontend/images.png"
-                alt="ETH Taipei AI Agents"
-                width={32}
-                height={32}
-              />
+              <Image src="/images.png" alt="" width={32} height={32} />
               <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 ETH Taipei AI Agents
               </span>

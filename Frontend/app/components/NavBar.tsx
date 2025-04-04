@@ -19,27 +19,34 @@ export default function NavBar() {
               whileHover={{ rotate: 10 }}
               transition={{ type: "spring", stiffness: 400 }}
             >
-              <Image
-                src="/Frontend/images.png"
-                alt="ETH Taipei AI Agents"
-                width={40}
-                height={40}
-              />
+              <Image src="/images.png" alt="" width={40} height={40} />
             </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              ETH Taipei <span className="text-gray-500 dark:text-gray-400">AI Agents</span>
+              ETH Taipei{" "}
+              <span className="text-gray-500 dark:text-gray-400">
+                AI Agents
+              </span>
             </h1>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
+            <Link
+              href="/"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+            >
               Home
             </Link>
-            <Link href="/CreateAgent" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
+            <Link
+              href="/CreateAgent"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+            >
               Create Agent
             </Link>
-            <Link href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
+            <Link
+              href="#"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+            >
               Documentation
             </Link>
             <motion.button
@@ -72,22 +79,22 @@ export default function NavBar() {
           className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
         >
           <div className="px-4 py-4 space-y-4">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               Home
             </Link>
-            <Link 
-              href="/CreateAgent" 
+            <Link
+              href="/CreateAgent"
               className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               Create Agent
             </Link>
-            <Link 
-              href="#" 
+            <Link
+              href="#"
               className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
