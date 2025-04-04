@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Github, Wallet, AlertCircle } from "lucide-react";
 
 export default function NavBar() {
@@ -12,6 +12,7 @@ export default function NavBar() {
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [showWalletToast, setShowWalletToast] = useState(false);
+  const [activeLink, setActiveLink] = useState("/");
   const router = useRouter();
 
   // Function to handle wallet connection
@@ -30,6 +31,12 @@ export default function NavBar() {
       // Store in localStorage to persist across page refreshes
       localStorage.setItem("walletConnected", "true");
       localStorage.setItem("walletAddress", mockAddress);
+      
+      // Show success animation
+      setShowWalletToast(true);
+      setTimeout(() => {
+        setShowWalletToast(false);
+      }, 3000);
     } catch (error) {
       console.error("Error connecting wallet:", error);
     }
@@ -57,181 +64,397 @@ export default function NavBar() {
       setWalletConnected(true);
       setWalletAddress(address);
     }
+    
+    // Set active link based on current path
+    const path = window.location.pathname;
+    setActiveLink(path);
   }, []);
 
+  // Animation variants
+  const navItemVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 24
+      }
+    }
+  };
+  
+  const mobileMenuVariants = {
+    hidden: { opacity: 0, height: 0, y: -20 },
+    visible: { 
+      opacity: 1, 
+      height: "auto", 
+      y: 0,
+      transition: {
+        duration: 0.3,
+        staggerChildren: 0.1,
+        when: "beforeChildren"
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      height: 0, 
+      y: -20,
+      transition: { duration: 0.2 }
+    }
+  };
+
   return (
-    <nav className="relative z-20">
+    <motion.nav 
+      className="relative z-20"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-6">
           {/* Logo and Brand */}
           <Link href="/" className="flex items-center gap-3">
             <motion.div
-              whileHover={{ rotate: 10 }}
+              whileHover={{ rotate: 10, scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400 }}
             >
               <Image src="/images.png" alt="" width={40} height={40} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <motion.h1 
+              className="text-2xl font-bold text-gray-900 dark:text-white"
+              animate={{ 
+                backgroundPosition: ["0% center", "100% center", "0% center"],
+              }}
+              transition={{ 
+                duration: 8, 
+                ease: "easeInOut", 
+                repeat: Infinity,
+              }}
+            >
               ETH Taipei{" "}
-              <span className="text-gray-500 dark:text-gray-400">
+              <motion.span 
+                className="text-gray-500 dark:text-gray-400"
+                whileHover={{ 
+                  color: "#3B82F6",
+                  transition: { duration: 0.2 }
+                }}
+              >
                 AI Agents
-              </span>
-            </h1>
+              </motion.span>
+            </motion.h1>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link
-              href="/"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
-            >
-              Home
-            </Link>
-            <Link
-              href="/CreateAgent"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
-            >
-              Create Agent
-            </Link>
-            <Link
-              href={walletConnected ? "/MyAgents" : "#"}
-              onClick={handleMyAgentsClick}
-              className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium ${
-                !walletConnected ? "cursor-not-allowed opacity-80" : ""
-              }`}
-            >
-              My Agents
-              {!walletConnected && (
-                <span className="ml-1 text-xs text-amber-500">
-                  (Connect wallet)
-                </span>
-              )}
-            </Link>
-            <Link
-              href="https://github.com/juSt-jeLLy/ETH-Taipei"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium flex items-center gap-1"
-            >
-              <Github size={16} />
-              Documentation
-            </Link>
+            {[
+              { href: "/", label: "Home" },
+              { href: "/CreateAgent", label: "Create Agent" },
+              { 
+                href: walletConnected ? "/MyAgents" : "#", 
+                label: "My Agents", 
+                needsWallet: true,
+                onClick: handleMyAgentsClick
+              },
+              { 
+                href: "https://github.com/juSt-jeLLy/ETH-Taipei", 
+                label: "Documentation", 
+                icon: <Github size={16} />,
+                external: true
+              }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                variants={navItemVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: index * 0.1 }}
+              >
+                <Link
+                  href={item.href}
+                  onClick={item.onClick}
+                  target={item.external ? "_blank" : undefined}
+                  rel={item.external ? "noopener noreferrer" : undefined}
+                  className={`relative text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium flex items-center gap-1 ${
+                    !item.needsWallet || walletConnected ? "" : "cursor-not-allowed opacity-80"
+                  } ${activeLink === item.href ? "text-blue-600 dark:text-blue-400" : ""}`}
+                >
+                  {item.icon && item.icon}
+                  {item.label}
+                  {item.needsWallet && !walletConnected && (
+                    <span className="ml-1 text-xs text-amber-500">
+                      (Connect wallet)
+                    </span>
+                  )}
+                  
+                  {/* Animated underline for active link */}
+                  {activeLink === item.href && (
+                    <motion.div 
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 dark:bg-blue-400"
+                      layoutId="activeNavIndicator"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                  
+                  {/* Hover underline animation */}
+                  <motion.div 
+                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gray-300 dark:bg-gray-600"
+                    initial={{ width: "0%" }}
+                    whileHover={{ width: "100%" }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </Link>
+              </motion.div>
+            ))}
             
             {walletConnected ? (
-              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2">
-                <Wallet size={16} />
-                <span className="truncate max-w-[100px]">{walletAddress}</span>
-              </div>
+              <motion.div 
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2 overflow-hidden"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+                }}
+              >
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 360],
+                  }}
+                  transition={{ duration: 2, repeat: 1, repeatDelay: 5 }}
+                >
+                  <Wallet size={16} />
+                </motion.div>
+                <motion.span 
+                  className="truncate max-w-[100px]"
+                  initial={{ width: 0 }}
+                  animate={{ width: "auto" }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {walletAddress}
+                </motion.span>
+              </motion.div>
             ) : (
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)"
+                }}
                 whileTap={{ scale: 0.98 }}
                 onClick={connectWallet}
-                className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium flex items-center gap-2 shadow-md"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
               >
-                <Wallet size={16} />
+                <motion.div
+                  animate={{ y: [0, -2, 0] }}
+                  transition={{ duration: 1, repeat: Infinity, repeatDelay: 1 }}
+                >
+                  <Wallet size={16} />
+                </motion.div>
                 Connect Wallet
               </motion.button>
             )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
+          <motion.div 
+            className="md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <motion.button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+              <AnimatePresence mode="wait">
+                {mobileMenuOpen ? (
+                  <motion.div
+                    key="close"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <X size={24} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="menu"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Menu size={24} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </motion.div>
         </div>
       </div>
 
       {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800"
-        >
-          <div className="px-4 py-4 space-y-4">
-            <Link
-              href="/"
-              className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              href="/CreateAgent"
-              className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Create Agent
-            </Link>
-            <Link
-              href={walletConnected ? "/MyAgents" : "#"}
-              onClick={(e) => {
-                setMobileMenuOpen(false);
-                handleMyAgentsClick(e);
-              }}
-              className={`block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2 ${
-                !walletConnected ? "cursor-not-allowed opacity-80" : ""
-              }`}
-            >
-              My Agents
-              {!walletConnected && (
-                <span className="ml-1 text-xs text-amber-500">
-                  (Connect wallet)
-                </span>
-              )}
-            </Link>
-            <Link
-              href="https://github.com/juSt-jeLLy/ETH-Taipei"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2 flex items-center gap-1"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <Github size={16} />
-              Documentation
-            </Link>
-            
-            {walletConnected ? (
-              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2">
-                <Wallet size={16} />
-                <span className="truncate max-w-[150px]">{walletAddress}</span>
-              </div>
-            ) : (
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  connectWallet();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium mt-2 flex items-center justify-center gap-2"
-              >
-                <Wallet size={16} />
-                Connect Wallet
-              </motion.button>
-            )}
-          </div>
-        </motion.div>
-      )}
-      
-      {/* Wallet connection toast */}
-      {showWalletToast && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50"
-        >
-          <AlertCircle size={16} />
-          <span>Please connect your wallet to access My Agents</span>
-        </motion.div>
-      )}
-    </nav>
-  );
-}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            variants={mobileMenuVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg"
+          >
+            <div className="px-4 py-4 space-y-4">
+              {[
+                { href: "/", label: "Home" },
+                { href: "/CreateAgent", label: "Create Agent" },
+                { 
+                  href: walletConnected ? "/MyAgents" : "#", 
+                  label: "My Agents", 
+                  needsWallet: true,
+                  onClick: (e) => {
+                    setMobileMenuOpen(false);
+                    handleMyAgentsClick(e);
+                  }
+                },
+                { 
+                  href: "https://github.com/juSt-jeLLy/ETH-Taipei", 
+                  label: "Documentation", 
+                  icon: <Github size={16} />,
+                  external: true,
+                  onClick: () => setMobileMenuOpen(false)
+                }
+              ].map((item, index) => (
+                <motion.div
+                  key={index}
+                  variants={navItemVariants}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Link
+                    href={item.href}
+                    onClick={item.onClick}
+                    target={item.external ? "_blank" : undefined}
+                    rel={item.external ? "noopener noreferrer" : undefined}
+                    className={`block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2 flex items-center gap-2 ${
+                      !item.needsWallet || walletConnected ? "" : "cursor-not-allowed opacity-80"
+                    } ${activeLink === item.href ? "text-blue-600 dark:text-blue-400" : ""}`}
+                  >
+                    {item.icon && (
+                      <motion.div
+                        animate={{ rotate: [0, 10, 0] }}
+                        transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
+                      >
+                        {item.icon}
+                      </motion.div>
+                    )}
+                    {item.label}
+                    {item.needsWallet && !walletConnected && (
+                      <span className="ml-1 text-xs text-amber-500">
+                        (Connect wallet)
+                      </span>
+                    )}
+                  </Link>
+                </motion.div>
+              ))}
+              
+              {walletConnected ? (
+                                <motion.div 
+                                className="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2 mt-4"
+                                variants={navItemVariants}
+                                whileHover={{ 
+                                  scale: 1.02,
+                                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+                                }}
+                              >
+                                <motion.div
+                                  animate={{ rotate: [0, 360] }}
+                                  transition={{ duration: 2, repeat: 1, repeatDelay: 5 }}
+                                >
+                                  <Wallet size={16} />
+                                </motion.div>
+                                <motion.span 
+                                  className="truncate max-w-[150px]"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: "auto" }}
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  {walletAddress}
+                                </motion.span>
+                              </motion.div>
+                            ) : (
+                              <motion.button
+                                variants={navItemVariants}
+                                whileHover={{ 
+                                  scale: 1.05,
+                                  boxShadow: "0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)"
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  connectWallet();
+                                  setMobileMenuOpen(false);
+                                }}
+                                className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium mt-4 flex items-center justify-center gap-2 shadow-md"
+                              >
+                                <motion.div
+                                  animate={{ y: [0, -2, 0] }}
+                                  transition={{ duration: 1, repeat: Infinity, repeatDelay: 1 }}
+                                >
+                                  <Wallet size={16} />
+                                </motion.div>
+                                Connect Wallet
+                              </motion.button>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    {/* Wallet connection toast */}
+                    <AnimatePresence>
+                      {showWalletToast && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50"
+                        >
+                          <motion.div
+                            animate={{ 
+                              scale: [1, 1.2, 1],
+                              rotate: [0, 10, 0]
+                            }}
+                            transition={{ duration: 0.5, repeat: 3, repeatType: "reverse" }}
+                          >
+                            <AlertCircle size={20} />
+                          </motion.div>
+                          <span>
+                            {walletConnected 
+                              ? "Wallet connected successfully!" 
+                              : "Please connect your wallet to access My Agents"}
+                          </span>
+                          <motion.div
+                            className="ml-2 w-1.5 h-1.5 bg-amber-500 rounded-full"
+                            animate={{ 
+                              scale: [1, 1.5, 1],
+                              opacity: [0.7, 1, 0.7]
+                            }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.nav>
+                );
+              }
+              

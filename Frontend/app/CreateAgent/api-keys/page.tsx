@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,6 +13,13 @@ import {
   Shield,
   Layers,
   Check,
+  Lock,
+  Copy,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  Database,
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
 
@@ -23,32 +30,57 @@ const mcpOptions = [
     name: "Ethereum",
     icon: "/images.png",
     description: "Main Ethereum network",
+    color: "blue",
   },
   {
     id: 2,
     name: "Polygon",
     icon: "/images.png",
     description: "Scalable Ethereum solution",
+    color: "purple",
   },
   {
     id: 3,
     name: "Arbitrum",
     icon: "/images.png",
     description: "Layer 2 scaling solution",
+    color: "indigo",
   },
   {
     id: 4,
     name: "Optimism",
     icon: "/images.png",
     description: "Optimistic rollup solution",
+    color: "red",
   },
   {
     id: 5,
     name: "Base",
     icon: "/images.png",
     description: "Coinbase L2 solution",
+    color: "green",
   },
 ];
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 100 },
+  },
+};
 
 export default function ApiKeys() {
   const router = useRouter();
@@ -60,56 +92,131 @@ export default function ApiKeys() {
 
   const [apiKeys, setApiKeys] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<number | null>(null);
+  const [visibleKeys, setVisibleKeys] = useState<Record<number, boolean>>({});
+  const [hoveringMCP, setHoveringMCP] = useState<number | null>(null);
+  const [validationErrors, setValidationErrors] = useState<
+    Record<number, boolean>
+  >({});
+  const [progress, setProgress] = useState(0);
 
   // Filter to only show selected MCPs
   const selectedMCPs = mcpOptions.filter((mcp) =>
     selectedMCPIds.includes(mcp.id)
   );
 
+  // Handle API key change
   const handleApiKeyChange = (mcpId: number, value: string) => {
     setApiKeys((prev) => ({
       ...prev,
       [mcpId]: value,
     }));
+
+    // Clear validation error when user types
+    if (validationErrors[mcpId]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [mcpId]: false,
+      }));
+    }
   };
 
+  // Toggle key visibility
+  const toggleKeyVisibility = (mcpId: number) => {
+    setVisibleKeys((prev) => ({
+      ...prev,
+      [mcpId]: !prev[mcpId],
+    }));
+  };
+
+  // Copy key to clipboard
+  const copyToClipboard = (mcpId: number, value: string) => {
+    navigator.clipboard.writeText(value);
+    setCopiedKey(mcpId);
+
+    // Reset copied status after 2 seconds
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 2000);
+  };
+
+  // Handle form submission
   const handleSubmit = () => {
     // Validate that all API keys are provided
-    const allKeysProvided = selectedMCPs.every((mcp) =>
-      apiKeys[mcp.id]?.trim()
-    );
-  
-    if (!allKeysProvided) {
-      alert("Please provide API keys for all selected MCPs");
+    const newValidationErrors: Record<number, boolean> = {};
+    let hasError = false;
+
+    selectedMCPs.forEach((mcp) => {
+      if (!apiKeys[mcp.id]?.trim()) {
+        newValidationErrors[mcp.id] = true;
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      setValidationErrors(newValidationErrors);
+
+      // Shake the form to indicate error
+      const form = document.getElementById("api-keys-form");
+      if (form) {
+        form.classList.add("shake-animation");
+        setTimeout(() => {
+          form.classList.remove("shake-animation");
+        }, 500);
+      }
+
       return;
     }
-  
+
     setIsSubmitting(true);
-  
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 50);
+
     // Here you would typically send the data to your backend
     // For now, we'll just simulate a submission
     setTimeout(() => {
-      setIsSubmitting(false);
-  
-      // Navigate to FindAgent page with the agent name as a query parameter
-      router.push(`/FindAgent?name=${encodeURIComponent(agentName)}`);
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      setTimeout(() => {
+        setIsSubmitting(false);
+        // Navigate to FindAgent page with the agent name as a query parameter
+        router.push(`/FindAgent?name=${encodeURIComponent(agentName)}`);
+      }, 500);
     }, 1500);
   };
-  
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header with background pattern */}
       <header className="relative overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-10 dark:opacity-20">
+        <motion.div
+          className="absolute inset-0 z-0 opacity-10 dark:opacity-20"
+          animate={{
+            backgroundPosition: ["0% 0%", "100% 100%"],
+          }}
+          transition={{
+            duration: 20,
+            ease: "linear",
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
+        >
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600" />
           <div className="absolute w-full h-full bg-[url('/grid-pattern.svg')] bg-center" />
-        </div>
+        </motion.div>
 
         <div className="relative z-10">
           <NavBar />
-
-          {/* Removed the back button from here */}
         </div>
       </header>
 
@@ -118,98 +225,405 @@ export default function ApiKeys() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800 mb-16"
+          transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800 mb-16 relative overflow-hidden"
         >
-          <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
-            <Key size={24} className="text-gray-700 dark:text-gray-300" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              API Keys for {agentName}
-            </h2>
-          </div>
+          {/* Background gradient effect */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/5 opacity-50 dark:opacity-20 z-0"
+            animate={{
+              backgroundPosition: ["0% 0%", "100% 100%"],
+            }}
+            transition={{
+              duration: 15,
+              ease: "linear",
+              repeat: Infinity,
+              repeatType: "reverse",
+            }}
+          />
 
-          <div className="space-y-6">
-            <p className="text-gray-600 dark:text-gray-400">
-              Please provide API keys for each of the selected MCPs to complete
-              your agent setup.
-            </p>
-
-            {selectedMCPs.map((mcp) => (
-              <div
-                key={mcp.id}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+          <div className="relative z-10" id="api-keys-form">
+            <motion.div
+              className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+            >
+              <motion.div
+                whileHover={{ rotate: 10, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 400 }}
               >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 p-1">
-                    <Image
-                      src={mcp.icon}
-                      alt={mcp.name}
-                      width={32}
-                      height={32}
-                    />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white text-base">
-                      {mcp.name}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {mcp.description}
-                    </div>
-                  </div>
-                </div>
+                <Key size={24} className="text-gray-700 dark:text-gray-300" />
+              </motion.div>
+              <motion.h2
+                className="text-2xl font-bold text-gray-900 dark:text-white"
+                animate={{
+                  color: ["#1F2937", "#3B82F6", "#1F2937"],
+                }}
+                transition={{
+                  duration: 5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              >
+                API Keys for{" "}
+                <span className="text-blue-600 dark:text-blue-400">
+                  {agentName}
+                </span>
+              </motion.h2>
+            </motion.div>
 
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    API Key
-                  </label>
-                  <input
-                    type="text"
-                    value={apiKeys[mcp.id] || ""}
-                    onChange={(e) => handleApiKeyChange(mcp.id, e.target.value)}
-                    placeholder={`Enter ${mcp.name} API Key`}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                  />
-                </div>
-              </div>
-            ))}
-
-            {/* Button row with back and submit buttons side by side with space between */}
-            <div className="flex justify-between items-center gap-8 mt-6">
-              <Link href="/CreateAgent" className="w-1/4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 rounded-lg flex items-center justify-center gap-2 font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+            <motion.div
+              className="space-y-6"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div
+                className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 flex items-start gap-3"
+                variants={itemVariants}
+                whileHover={{ scale: 1.01, y: -2 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <motion.div
+                  animate={{ rotate: [0, 10, 0] }}
+                  transition={{ duration: 1, repeat: Infinity, repeatDelay: 3 }}
                 >
-                  <ArrowLeft size={18} />
-                  <span>Back</span>
-                </motion.button>
-              </Link>
+                  <Lock
+                    className="text-blue-600 dark:text-blue-400 mt-0.5"
+                    size={18}
+                  />
+                </motion.div>
+                <div>
+                  <p className="text-blue-800 dark:text-blue-300 font-medium mb-1">
+                    Secure API Keys Required
+                  </p>
+                  <p className="text-blue-600 dark:text-blue-400 text-sm">
+                    Please provide API keys for each of the selected MCPs to
+                    complete your agent setup. Your keys are encrypted and
+                    stored securely.
+                  </p>
+                </div>
+              </motion.div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`w-1/4 py-4 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                  isSubmitting
-                    ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
-                }`}
+              {selectedMCPs.map((mcp, index) => (
+                <motion.div
+                  key={mcp.id}
+                  variants={itemVariants}
+                  whileHover={{
+                    scale: 1.02,
+                    y: -2,
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                  }}
+                  onHoverStart={() => setHoveringMCP(mcp.id)}
+                  onHoverEnd={() => setHoveringMCP(null)}
+                  className={`p-4 border rounded-lg transition-all duration-300 ${
+                    validationErrors[mcp.id]
+                      ? "border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/10"
+                      : `border-${
+                          mcp.color === "blue"
+                            ? "blue"
+                            : mcp.color === "purple"
+                            ? "purple"
+                            : mcp.color === "green"
+                            ? "green"
+                            : mcp.color === "red"
+                            ? "red"
+                            : "indigo"
+                        }-200 
+                         dark:border-${
+                           mcp.color === "blue"
+                             ? "blue"
+                             : mcp.color === "purple"
+                             ? "purple"
+                             : mcp.color === "green"
+                             ? "green"
+                             : mcp.color === "red"
+                             ? "red"
+                             : "indigo"
+                         }-700 
+                         bg-white dark:bg-gray-800`
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <motion.div
+                      className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-${
+                        mcp.color === "blue"
+                          ? "blue"
+                          : mcp.color === "purple"
+                          ? "purple"
+                          : mcp.color === "green"
+                          ? "green"
+                          : mcp.color === "red"
+                          ? "red"
+                          : "indigo"
+                      }-100 
+                      dark:bg-${
+                        mcp.color === "blue"
+                          ? "blue"
+                          : mcp.color === "purple"
+                          ? "purple"
+                          : mcp.color === "green"
+                          ? "green"
+                          : mcp.color === "red"
+                          ? "red"
+                          : "indigo"
+                      }-900/30 p-1`}
+                      animate={
+                        hoveringMCP === mcp.id
+                          ? {
+                              rotate: [0, 10, 0],
+                              scale: [1, 1.1, 1],
+                            }
+                          : {}
+                      }
+                      transition={{ duration: 0.5 }}
+                    >
+                      <Image
+                        src={mcp.icon}
+                        alt={mcp.name}
+                        width={32}
+                        height={32}
+                      />
+                    </motion.div>
+                    <div>
+                      <motion.div
+                        className={`font-medium text-base text-${
+                          mcp.color === "blue"
+                            ? "blue"
+                            : mcp.color === "purple"
+                            ? "purple"
+                            : mcp.color === "green"
+                            ? "green"
+                            : mcp.color === "red"
+                            ? "red"
+                            : "indigo"
+                        }-600 
+                        dark:text-${
+                          mcp.color === "blue"
+                            ? "blue"
+                            : mcp.color === "purple"
+                            ? "purple"
+                            : mcp.color === "green"
+                            ? "green"
+                            : mcp.color === "red"
+                            ? "red"
+                            : "indigo"
+                        }-400`}
+                        animate={
+                          hoveringMCP === mcp.id ? { scale: [1, 1.03, 1] } : {}
+                        }
+                        transition={{ duration: 0.5 }}
+                      >
+                        {mcp.name}
+                      </motion.div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <Database size={12} />
+                        {mcp.description}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                      <Key size={14} />
+                      API Key
+                    </label>
+                    <div className="relative">
+                      <motion.input
+                        type={visibleKeys[mcp.id] ? "text" : "password"}
+                        value={apiKeys[mcp.id] || ""}
+                        onChange={(e) =>
+                          handleApiKeyChange(mcp.id, e.target.value)
+                        }
+                        placeholder={`Enter ${mcp.name} API Key`}
+                        className={`w-full px-4 py-3 pr-20 rounded-lg border transition-all duration-200 ${
+                          validationErrors[mcp.id]
+                            ? "border-red-300 dark:border-red-700 focus:ring-red-400 dark:focus:ring-red-600"
+                            : `border-${
+                                mcp.color === "blue"
+                                  ? "blue"
+                                  : mcp.color === "purple"
+                                  ? "purple"
+                                  : mcp.color === "green"
+                                  ? "green"
+                                  : mcp.color === "red"
+                                  ? "red"
+                                  : "indigo"
+                              }-300 
+                               dark:border-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-700 
+                               focus:ring-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-400 
+                               dark:focus:ring-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-600`
+                        } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
+                        whileFocus={{ scale: 1.01 }}
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        <motion.button
+                          type="button"
+                          onClick={() => toggleKeyVisibility(mcp.id)}
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          {visibleKeys[mcp.id] ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </motion.button>
+
+                        {apiKeys[mcp.id] && (
+                          <motion.button
+                            type="button"
+                            onClick={() =>
+                              copyToClipboard(mcp.id, apiKeys[mcp.id])
+                            }
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            {copiedKey === mcp.id ? (
+                              <Check size={16} className="text-green-500" />
+                            ) : (
+                              <Copy size={16} />
+                            )}
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {validationErrors[mcp.id] && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 mt-1"
+                        >
+                          <AlertCircle size={14} />
+                          <span>API key is required</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Button row with back and submit buttons side by side with space between */}
+              <motion.div
+                className="flex justify-between items-center gap-8 mt-6"
+                variants={itemVariants}
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    <span>Creating...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check size={18} />
-                    <span>Create Agent</span>
-                  </>
-                )}
-              </motion.button>
-            </div>
+                <Link href="/CreateAgent" className="w-1/4">
+                  <motion.button
+                    whileHover={{ scale: 1.02, x: -3 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    className="w-full py-4 rounded-lg flex items-center justify-center gap-2 font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    <motion.div
+                      animate={{ x: [0, -3, 0] }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        repeatDelay: 2,
+                      }}
+                    >
+                      <ArrowLeft size={18} />
+                    </motion.div>
+                    <span>Back</span>
+                  </motion.button>
+                </Link>
+
+                <motion.button
+                  whileHover={{
+                    scale: isSubmitting ? 1 : 1.02,
+                    boxShadow: isSubmitting
+                      ? "none"
+                      : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                  }}
+                  whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className={`w-1/4 py-4 rounded-lg flex items-center justify-center gap-2 font-medium transition-all duration-300 ${
+                    isSubmitting
+                      ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <div className="flex flex-col items-center w-full">
+                      <div className="flex items-center gap-2 mb-1">
+                        <motion.div
+                          className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        />
+                        <span>Creating...</span>
+                      </div>
+                      <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-blue-500 dark:bg-blue-400 rounded-full"
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      <span>Create Agent</span>
+                      <motion.div
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          repeatDelay: 2,
+                        }}
+                      >
+                        <ChevronRight size={18} />
+                      </motion.div>
+                    </>
+                  )}
+                </motion.button>
+              </motion.div>
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -217,26 +631,85 @@ export default function ApiKeys() {
       {/* Footer */}
       <footer className="py-12 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <Image src="/images.png" alt="" width={32} height={32} />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">
+          <motion.div
+            className="flex flex-col md:flex-row justify-between items-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true }}
+          >
+            <motion.div
+              className="flex items-center gap-3 mb-4 md:mb-0"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <motion.div
+                whileHover={{ rotate: 10 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <Image src="/images.png" alt="" width={32} height={32} />
+              </motion.div>
+              <motion.span
+                className="text-lg font-semibold text-gray-900 dark:text-white"
+                animate={{
+                  color: ["#1F2937", "#3B82F6", "#1F2937"],
+                }}
+                transition={{
+                  duration: 5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              >
                 ETH Taipei AI Agents
-              </span>
-            </div>
+              </motion.span>
+            </motion.div>
             <div className="flex items-center gap-6 text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-2">
+              <motion.div
+                className="flex items-center gap-2"
+                whileHover={{ scale: 1.05, color: "#3B82F6" }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <Shield size={14} />
                 <span>ETH Taipei AI Agents © 2023</span>
-              </div>
-              <div className="flex items-center gap-2">
+              </motion.div>
+              <motion.div
+                className="flex items-center gap-2"
+                whileHover={{ scale: 1.05, color: "#8B5CF6" }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 <Layers size={14} />
                 <span>Powered by blockchain technology</span>
-              </div>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </footer>
+
+      <style jsx global>{`
+        .shake-animation {
+          animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+
+        @keyframes shake {
+          10%,
+          90% {
+            transform: translate3d(-1px, 0, 0);
+          }
+          20%,
+          80% {
+            transform: translate3d(2px, 0, 0);
+          }
+          30%,
+          50%,
+          70% {
+            transform: translate3d(-3px, 0, 0);
+          }
+          40%,
+          60% {
+            transform: translate3d(3px, 0, 0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
