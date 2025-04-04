@@ -13,6 +13,7 @@ import {
   Zap,
   Globe,
   Code,
+  Github,
   ChevronRight,
 } from "lucide-react";
 import NavBar from "./components/NavBar";
@@ -58,13 +59,19 @@ export default function Home() {
                       Create Agent <ArrowRight size={18} />
                     </motion.button>
                   </Link>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="px-8 py-4 border border-gray-300 dark:border-gray-700 rounded-lg font-medium text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 w-full sm:w-auto"
+                  <Link
+                    href="https://github.com/juSt-jeLLy/ETH-Taipei"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    Learn More <ChevronRight size={18} />
-                  </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-8 py-4 border border-gray-300 dark:border-gray-700 rounded-lg font-medium text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2 w-full sm:w-auto"
+                    >
+                      Learn More <Github size={18} className="ml-1" />
+                    </motion.button>
+                  </Link>
                 </div>
               </motion.div>
 

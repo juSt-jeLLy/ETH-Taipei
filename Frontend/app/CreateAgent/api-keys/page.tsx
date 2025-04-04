@@ -205,7 +205,7 @@ export default function ApiKeys() {
                 ) : (
                   <>
                     <Check size={18} />
-                    <span>Complete</span>
+                    <span>Create Agent</span>
                   </>
                 )}
               </motion.button>

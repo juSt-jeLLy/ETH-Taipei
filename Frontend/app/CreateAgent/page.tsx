@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
   Plus,
@@ -16,6 +16,8 @@ import {
   Shield,
   Layers,
   ArrowLeft,
+  AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import NavBar from "../components/NavBar";
 
@@ -58,6 +60,103 @@ export default function CreateAgent() {
   const [invocationType, setInvocationType] = useState("ping");
   const [selectedMCPs, setSelectedMCPs] = useState<number[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  // ENS validation function
+  const validateENSName = (name: string): string | null => {
+    // Check if empty
+    if (!name.trim()) {
+      return "Agent ENS name is required";
+    }
+
+    // Check if ends with .eth
+    if (!name.endsWith(".eth")) {
+      return "ENS name must end with .eth";
+    }
+
+    // Remove .eth for further validation
+    const baseName = name.slice(0, -4);
+
+    // Check minimum length (at least 3 chars before .eth)
+    if (baseName.length < 3) {
+      return "ENS name must be at least 3 characters long (excluding .eth)";
+    }
+
+    // Check for valid characters (lowercase letters, numbers, hyphens)
+    if (!/^[a-z0-9-]+$/.test(baseName)) {
+      return "ENS name can only contain lowercase letters, numbers, and hyphens";
+    }
+
+    // Check for starting or ending with hyphen
+    if (baseName.startsWith("-") || baseName.endsWith("-")) {
+      return "ENS name cannot start or end with a hyphen";
+    }
+
+    // Check for consecutive hyphens
+    if (baseName.includes("--")) {
+      return "ENS name cannot contain consecutive hyphens";
+    }
+
+    return null;
+  };
+
+  // Handle name change with validation
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setAgentName(newName);
+
+    // Only show validation errors after user has typed something
+    if (newName) {
+      // Check if the name doesn't end with .eth and has at least 3 characters
+      if (
+        newName.length >= 3 &&
+        !newName.endsWith(".eth") &&
+        !newName.includes(".")
+      ) {
+        // Show suggestions dropdown
+        setShowSuggestions(true);
+        setNameError(null);
+      } else {
+        // Regular validation
+        setNameError(validateENSName(newName));
+        setShowSuggestions(false);
+      }
+    } else {
+      setNameError(null);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suffix: string) => {
+    setAgentName(agentName + suffix);
+    setShowSuggestions(false);
+    // Focus back on the input
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const toggleMCP = (id: number) => {
     if (selectedMCPs.includes(id)) {
@@ -66,14 +165,27 @@ export default function CreateAgent() {
       setSelectedMCPs([...selectedMCPs, id]);
     }
   };
-
   const handleCreateAgent = () => {
-    if (!agentName || selectedMCPs.length === 0) return;
+    // Validate ENS name before proceeding
+    const error = validateENSName(agentName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
+
+    if (selectedMCPs.length === 0) {
+      alert("Please select at least one MCP");
+      return;
+    }
 
     // Instead of creating the agent directly, navigate to the API keys page
     // with the current selections as query parameters
-    const selectedMCPsString = selectedMCPs.join(',');
-    router.push(`/CreateAgent/api-keys?name=${encodeURIComponent(agentName)}&type=${invocationType}&mcps=${selectedMCPsString}`);
+    const selectedMCPsString = selectedMCPs.join(",");
+    router.push(
+      `/CreateAgent/api-keys?name=${encodeURIComponent(
+        agentName
+      )}&type=${invocationType}&mcps=${selectedMCPsString}`
+    );
   };
 
   return (
@@ -88,7 +200,7 @@ export default function CreateAgent() {
         <div className="relative z-10">
           {/* Replace the old header with NavBar */}
           <NavBar />
-          
+
           {/* Removed the back button from here */}
         </div>
       </header>
@@ -108,20 +220,68 @@ export default function CreateAgent() {
           </div>
 
           <div className="space-y-8">
-            <div>
+            <div className="relative">
               <label className="flex items-center gap-2 text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                 <User size={16} />
-                Agent Name
+                Agent ENS Name
               </label>
-              <input
-                type="text"
-                value={agentName}
-                onChange={(e) => setAgentName(e.target.value)}
-                placeholder="Enter agent name"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-              />
-            </div>
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={agentName}
+                  onChange={handleNameChange}
+                  placeholder="Enter agent ENS name (e.g., myagent.eth)"
+                  className={`w-full px-4 py-3 rounded-lg border ${
+                    nameError
+                      ? "border-red-300 dark:border-red-700 focus:ring-red-400 dark:focus:ring-red-600"
+                      : "border-gray-300 dark:border-gray-700 focus:ring-gray-400 dark:focus:ring-gray-600"
+                  } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
+                />
 
+                {/* Suggestions dropdown */}
+                <AnimatePresence>
+                  {showSuggestions && (
+                    <motion.div
+                      ref={suggestionsRef}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden"
+                    >
+                      <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/30">
+                        <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">
+                          Recommended ENS formats:
+                        </p>
+                      </div>
+                      <div>
+                        <button
+                          onClick={() => handleSelectSuggestion(".eth")}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <span className="font-medium">{agentName}.eth</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            (Standard ENS format)
+                          </span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {nameError && (
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-red-500 dark:text-red-400">
+                  <AlertCircle size={14} />
+                  <span>{nameError}</span>
+                </div>
+              )}
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                ENS names must end with .eth and be at least 3 characters long
+                (e.g., myagent.eth)
+              </div>
+            </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                 <Code size={16} />
@@ -242,6 +402,12 @@ export default function CreateAgent() {
                   </motion.div>
                 ))}
               </div>
+              {selectedMCPs.length === 0 && (
+                <div className="mt-2 text-sm text-amber-500 dark:text-amber-400 flex items-center gap-1.5">
+                  <AlertCircle size={14} />
+                  <span>Please select at least one MCP</span>
+                </div>
+              )}
             </div>
 
             {/* Button row with back and next buttons side by side with space between */}
@@ -256,14 +422,22 @@ export default function CreateAgent() {
                   <span>Back</span>
                 </motion.button>
               </Link>
-              
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleCreateAgent}
-                disabled={!agentName || selectedMCPs.length === 0 || isCreating}
+                disabled={
+                  !!nameError ||
+                  !agentName ||
+                  selectedMCPs.length === 0 ||
+                  isCreating
+                }
                 className={`w-1/4 py-4 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                  !agentName || selectedMCPs.length === 0 || isCreating
+                  !!nameError ||
+                  !agentName ||
+                  selectedMCPs.length === 0 ||
+                  isCreating
                     ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
                 }`}
@@ -290,12 +464,7 @@ export default function CreateAgent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <Image
-                src="/images.png"
-                alt=""
-                width={32}
-                height={32}
-              />
+              <Image src="/images.png" alt="" width={32} height={32} />
               <span className="text-lg font-semibold text-gray-900 dark:text-white">
                 ETH Taipei AI Agents
               </span>

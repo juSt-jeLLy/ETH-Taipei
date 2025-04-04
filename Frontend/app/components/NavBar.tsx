@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Github } from "lucide-react";
 
 export default function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,9 +44,12 @@ export default function NavBar() {
               Create Agent
             </Link>
             <Link
-              href="#"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+              href="https://github.com/juSt-jeLLy/ETH-Taipei"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium flex items-center gap-1"
             >
+              <Github size={16} />
               Documentation
             </Link>
             <motion.button
@@ -94,10 +97,13 @@ export default function NavBar() {
               Create Agent
             </Link>
             <Link
-              href="#"
-              className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2"
+              href="https://github.com/juSt-jeLLy/ETH-Taipei"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2 flex items-center gap-1"
               onClick={() => setMobileMenuOpen(false)}
             >
+              <Github size={16} />
               Documentation
             </Link>
             <motion.button
