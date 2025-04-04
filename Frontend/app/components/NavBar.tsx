@@ -1,13 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Menu, X, Github } from "lucide-react";
+import { Menu, X, Github, Wallet, AlertCircle } from "lucide-react";
 
 export default function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [showWalletToast, setShowWalletToast] = useState(false);
+  const router = useRouter();
+
+  // Function to handle wallet connection
+  const connectWallet = async () => {
+    // In a real implementation, this would use ethers.js or web3.js to connect
+    // For now, we'll simulate a connection
+    try {
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock successful connection
+      const mockAddress = "0x" + Math.random().toString(16).slice(2, 12);
+      setWalletAddress(mockAddress);
+      setWalletConnected(true);
+      
+      // Store in localStorage to persist across page refreshes
+      localStorage.setItem("walletConnected", "true");
+      localStorage.setItem("walletAddress", mockAddress);
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+    }
+  };
+
+  // Function to handle My Agents link click
+  const handleMyAgentsClick = (e) => {
+    if (!walletConnected) {
+      e.preventDefault();
+      setShowWalletToast(true);
+      
+      // Hide toast after 3 seconds
+      setTimeout(() => {
+        setShowWalletToast(false);
+      }, 3000);
+    }
+  };
+
+  // Check if wallet was previously connected
+  useEffect(() => {
+    const isConnected = localStorage.getItem("walletConnected") === "true";
+    const address = localStorage.getItem("walletAddress");
+    
+    if (isConnected && address) {
+      setWalletConnected(true);
+      setWalletAddress(address);
+    }
+  }, []);
 
   return (
     <nav className="relative z-20">
@@ -44,6 +94,20 @@ export default function NavBar() {
               Create Agent
             </Link>
             <Link
+              href={walletConnected ? "/MyAgents" : "#"}
+              onClick={handleMyAgentsClick}
+              className={`text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium ${
+                !walletConnected ? "cursor-not-allowed opacity-80" : ""
+              }`}
+            >
+              My Agents
+              {!walletConnected && (
+                <span className="ml-1 text-xs text-amber-500">
+                  (Connect wallet)
+                </span>
+              )}
+            </Link>
+            <Link
               href="https://github.com/juSt-jeLLy/ETH-Taipei"
               target="_blank"
               rel="noopener noreferrer"
@@ -52,13 +116,23 @@ export default function NavBar() {
               <Github size={16} />
               Documentation
             </Link>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium"
-            >
-              Connect Wallet
-            </motion.button>
+            
+            {walletConnected ? (
+              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2">
+                <Wallet size={16} />
+                <span className="truncate max-w-[100px]">{walletAddress}</span>
+              </div>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={connectWallet}
+                className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium flex items-center gap-2"
+              >
+                <Wallet size={16} />
+                Connect Wallet
+              </motion.button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -97,6 +171,23 @@ export default function NavBar() {
               Create Agent
             </Link>
             <Link
+              href={walletConnected ? "/MyAgents" : "#"}
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                handleMyAgentsClick(e);
+              }}
+              className={`block text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium py-2 ${
+                !walletConnected ? "cursor-not-allowed opacity-80" : ""
+              }`}
+            >
+              My Agents
+              {!walletConnected && (
+                <span className="ml-1 text-xs text-amber-500">
+                  (Connect wallet)
+                </span>
+              )}
+            </Link>
+            <Link
               href="https://github.com/juSt-jeLLy/ETH-Taipei"
               target="_blank"
               rel="noopener noreferrer"
@@ -106,13 +197,39 @@ export default function NavBar() {
               <Github size={16} />
               Documentation
             </Link>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium mt-2"
-            >
-              Connect Wallet
-            </motion.button>
+            
+            {walletConnected ? (
+              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-medium flex items-center gap-2">
+                <Wallet size={16} />
+                <span className="truncate max-w-[150px]">{walletAddress}</span>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  connectWallet();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium mt-2 flex items-center justify-center gap-2"
+              >
+                <Wallet size={16} />
+                Connect Wallet
+              </motion.button>
+            )}
           </div>
+        </motion.div>
+      )}
+      
+      {/* Wallet connection toast */}
+      {showWalletToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-amber-50 dark:bg-amber-900 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50"
+        >
+          <AlertCircle size={16} />
+          <span>Please connect your wallet to access My Agents</span>
         </motion.div>
       )}
     </nav>

@@ -78,24 +78,24 @@ export default function ApiKeys() {
     const allKeysProvided = selectedMCPs.every((mcp) =>
       apiKeys[mcp.id]?.trim()
     );
-
+  
     if (!allKeysProvided) {
       alert("Please provide API keys for all selected MCPs");
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     // Here you would typically send the data to your backend
     // For now, we'll just simulate a submission
     setTimeout(() => {
       setIsSubmitting(false);
-
-      // Show success message and redirect to home or a success page
-      alert("Agent created successfully with API keys!");
-      router.push("/");
+  
+      // Navigate to FindAgent page with the agent name as a query parameter
+      router.push(`/FindAgent?name=${encodeURIComponent(agentName)}`);
     }, 1500);
   };
+  
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
