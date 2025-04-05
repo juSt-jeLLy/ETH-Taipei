@@ -13,6 +13,10 @@ import {
   Layers,
   ArrowLeft,
   Loader,
+  ChevronDown,
+  Settings,
+  Info,
+  AlertCircle,
 } from "lucide-react";
 import NavBar from "../components/NavBar";
 
@@ -25,9 +29,15 @@ export default function FindAgent() {
   >([]);
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showAgentInfo, setShowAgentInfo] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -38,9 +48,110 @@ export default function FindAgent() {
     scrollToBottom();
   }, [messages]);
 
+  // ENS validation function
+  const validateENSName = (name: string): string | null => {
+    // Check if empty
+    if (!name.trim()) {
+      return "Agent ENS name is required";
+    }
+
+    // Check if ends with .eth
+    if (!name.endsWith(".eth")) {
+      return "ENS name must end with .eth";
+    }
+
+    // Remove .eth for further validation
+    const baseName = name.slice(0, -4);
+
+    // Check minimum length (at least 3 chars before .eth)
+    if (baseName.length < 3) {
+      return "ENS name must be at least 3 characters long (excluding .eth)";
+    }
+
+    // Check for valid characters (lowercase letters, numbers, hyphens)
+    if (!/^[a-z0-9-]+$/.test(baseName)) {
+      return "ENS name can only contain lowercase letters, numbers, and hyphens";
+    }
+
+    // Check for starting or ending with hyphen
+    if (baseName.startsWith("-") || baseName.endsWith("-")) {
+      return "ENS name cannot start or end with a hyphen";
+    }
+
+    // Check for consecutive hyphens
+    if (baseName.includes("--")) {
+      return "ENS name cannot contain consecutive hyphens";
+    }
+
+    return null;
+  };
+
+  // Handle name change with validation
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setAgentName(newName);
+
+    // Only show validation errors after user has typed something
+    if (newName) {
+      // Check if the name doesn't end with .eth and has at least 3 characters
+      if (
+        newName.length >= 3 &&
+        !newName.endsWith(".eth") &&
+        !newName.includes(".")
+      ) {
+        // Show suggestions dropdown
+        setShowSuggestions(true);
+        setNameError(null);
+      } else {
+        // Regular validation
+        setNameError(validateENSName(newName));
+        setShowSuggestions(false);
+      }
+    } else {
+      setNameError(null);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSelectSuggestion = (suffix: string) => {
+    setAgentName(agentName + suffix);
+    setShowSuggestions(false);
+    // Focus back on the input
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Handle agent search
   const handleSearch = () => {
     if (!agentName.trim()) return;
+
+    // Validate ENS name before proceeding
+    const error = validateENSName(agentName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
 
     setIsSearching(true);
 
@@ -124,8 +235,16 @@ export default function FindAgent() {
     return `I understand you're asking about "${message}". As your Web3 agent, I can monitor blockchain events, execute transactions, and provide analytics. Could you provide more details about what you'd like me to do?`;
   };
 
+  // Reset chat and go back to search
+  const handleReset = () => {
+    setAgentFound(false);
+    setAgentName("");
+    setMessages([]);
+    setShowAgentInfo(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       {/* Header with background pattern */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-10 dark:opacity-20">
@@ -139,216 +258,419 @@ export default function FindAgent() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800 mb-16"
+          className="w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden"
         >
-          <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
-            <Bot size={24} className="text-gray-700 dark:text-gray-300" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Find and Chat with Your Agent
-            </h2>
+          {/* Header */}
+          <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {agentFound && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleReset}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <ArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+                </motion.button>
+              )}
+              <Bot size={24} className="text-gray-700 dark:text-gray-300" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {agentFound ? agentName : "Find and Chat with Your Agent"}
+              </h2>
+            </div>
+            
+            {agentFound && (
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAgentInfo(!showAgentInfo)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Info size={18} className="text-gray-700 dark:text-gray-300" />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Settings size={18} className="text-gray-700 dark:text-gray-300" />
+                </motion.button>
+              </div>
+            )}
           </div>
 
           {!agentFound ? (
-            <div className="space-y-6">
-              <p className="text-gray-600 dark:text-gray-400">
-                Enter the ENS name of your agent to start chatting with it.
-              </p>
-
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  placeholder="Enter agent ENS name (e.g., myagent.eth)"
-                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSearch();
-                  }}
-                />
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSearch}
-                  disabled={!agentName.trim() || isSearching}
-                  className={`px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                    !agentName.trim() || isSearching
-                      ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
-                  }`}
-                >
-                  {isSearching ? (
-                    <>
-                      <Loader size={18} className="animate-spin" />
-                      <span>Searching...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Search size={18} />
-                      <span>Find Agent</span>
-                    </>
-                  )}
-                </motion.button>
-              </div>
-
-              <div className="mt-8 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Don't have an agent yet?
+            <div className="p-8 space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-center max-w-md mx-auto"
+              >
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Bot size={28} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  Connect with Your Web3 Agent
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Enter the ENS name of your agent to start chatting and managing your Web3 operations.
                 </p>
-                <Link href="/CreateAgent">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="mt-2 px-4 py-2 text-blue-600 dark:text-blue-400 font-medium"
-                  >
-                    Create a new agent
-                  </motion.button>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                  <Bot size={20} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    {agentName}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Web3 AI Agent
-                  </p>
-                </div>
-              </div>
+              </motion.div>
 
-              {/* Chat messages */}
-              <div className="h-96 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <AnimatePresence>
-                  {messages.map((message, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className={`flex ${
-                        message.sender === "user"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`max-w-[80%] p-3 rounded-lg ${
-                          message.sender === "user"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                        }`}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="max-w-md mx-auto"
+              >
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search size={18} className="text-gray-400" />
+                  </div>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={agentName}
+                    onChange={handleNameChange}
+                    placeholder="Enter agent ENS name (e.g., myagent.eth)"
+                    className={`w-full pl-10 pr-4 py-3 rounded-lg border ${
+                      nameError
+                        ? "border-red-300 dark:border-red-700 focus:ring-red-400 dark:focus:ring-red-600"
+                        : "border-gray-300 dark:border-gray-700 focus:ring-blue-400 dark:focus:ring-blue-600"
+                    } bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 transition-all`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !nameError && agentName.trim()) handleSearch();
+                    }}
+                  />
+                  
+                  {/* Suggestions dropdown */}
+                  <AnimatePresence>
+                    {showSuggestions && (
+                      <motion.div
+                        ref={suggestionsRef}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{
+                          duration: 0.2,
+                          type: "spring",
+                          stiffness: 200,
+                        }}
+                        className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden"
                       >
-                        <p>{message.text}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.sender === "user"
-                              ? "text-blue-200"
-                              : "text-gray-500 dark:text-gray-400"
-                          }`}
+                        <motion.div
+                          className="p-2 border-b border-gray-100 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/30"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.1 }}
                         >
-                          {message.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-
-                  {isTyping && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex justify-start"
-                    >
-                      <div className="max-w-[80%] p-3 rounded-lg bg-gray-200 dark:bg-gray-700">
-                        <div className="flex gap-1">
-                          <div
-                            className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
-                            style={{ animationDelay: "0ms" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
-                            style={{ animationDelay: "150ms" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
-                            style={{ animationDelay: "300ms" }}
-                          ></div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Message input */}
-              <div className="flex gap-3">
-                <input
-                  ref={chatInputRef}
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSendMessage();
-                  }}
-                />
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  className={`px-6 py-3 rounded-lg flex items-center justify-center gap-2 font-medium ${
-                    !newMessage.trim()
-                      ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white text-white dark:text-gray-900"
-                  }`}
-                >
-                  <Send size={18} />
-                  <span>Send</span>
-                </motion.button>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Footer */}
-      <footer className="py-12 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-3 mb-4 md:mb-0">
-              <Image src="/images.png" alt="" width={32} height={32} />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                ETH Taipei AI Agents
-              </span>
-            </div>
-            <div className="flex items-center gap-6 text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-2">
-                <Shield size={14} />
-                <span>ETH Taipei AI Agents © 2023</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Layers size={14} />
-                <span>Powered by blockchain technology</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
+                          <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">
+                            Recommended ENS formats:
+                          </p>
+                        </motion.div>
+                        <motion.div
+                                                  whileHover={{
+                                                    backgroundColor: "rgba(243, 244, 246, 0.5)",
+                                                  }}
+                                                  transition={{ duration: 0.2 }}
+                                                >
+                                                  <button
+                                                    onClick={() => handleSelectSuggestion(".eth")}
+                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                                  >
+                                                    <motion.span
+                                                      className="font-medium"
+                                                      initial={{ opacity: 0, x: -5 }}
+                                                      animate={{ opacity: 1, x: 0 }}
+                                                      transition={{ delay: 0.2 }}
+                                                    >
+                                                      {agentName}.eth
+                                                    </motion.span>
+                                                    <motion.span
+                                                      className="text-xs text-gray-500 dark:text-gray-400"
+                                                      initial={{ opacity: 0 }}
+                                                      animate={{ opacity: 1 }}
+                                                      transition={{ delay: 0.3 }}
+                                                    >
+                                                      (Standard ENS format)
+                                                    </motion.span>
+                                                  </button>
+                                                </motion.div>
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                        
+                                        {/* Error message */}
+                                        <AnimatePresence>
+                                          {nameError && (
+                                            <motion.div
+                                              className="mt-2 flex items-center gap-1.5 text-sm text-red-500 dark:text-red-400"
+                                              initial={{ opacity: 0, height: 0 }}
+                                              animate={{ opacity: 1, height: "auto" }}
+                                              exit={{ opacity: 0, height: 0 }}
+                                              transition={{ duration: 0.2 }}
+                                            >
+                                              <motion.div
+                                                animate={{ rotate: [0, 10, 0] }}
+                                                transition={{ duration: 0.5, repeat: 1 }}
+                                              >
+                                                <AlertCircle size={14} />
+                                              </motion.div>
+                                              <span>{nameError}</span>
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                        
+                                        <motion.button
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                          onClick={handleSearch}
+                                          disabled={!agentName.trim() || isSearching || !!nameError}
+                                          className={`w-full mt-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all ${
+                                            !agentName.trim() || isSearching || !!nameError
+                                              ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                              : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg"
+                                          }`}
+                                        >
+                                          {isSearching ? (
+                                            <>
+                                              <Loader size={18} className="animate-spin" />
+                                              <span>Searching...</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Search size={18} />
+                                              <span>Find Agent</span>
+                                            </>
+                                          )}
+                                        </motion.button>
+                                        
+                                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                          ENS names must end with .eth and be at least 3 characters long (e.g., myagent.eth)
+                                        </div>
+                                      </motion.div>
+                        
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="text-center max-w-md mx-auto pt-4 border-t border-gray-100 dark:border-gray-800"
+                                      >
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                          Don't have an agent yet?
+                                        </p>
+                                        <Link href="/CreateAgent">
+                                          <motion.button
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            className="px-6 py-2 rounded-lg text-blue-600 dark:text-blue-400 font-medium border border-blue-200 dark:border-blue-900 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                                          >
+                                            Create a new agent
+                                          </motion.button>
+                                        </Link>
+                                      </motion.div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col h-[calc(100vh-16rem)]">
+                                      {/* Agent info panel - conditionally shown */}
+                                      <AnimatePresence>
+                                        {showAgentInfo && (
+                                          <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="border-b border-gray-100 dark:border-gray-800 overflow-hidden"
+                                          >
+                                            <div className="p-4 bg-gray-50 dark:bg-gray-800/50">
+                                              <div className="flex items-start gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                                                  <Bot size={24} className="text-blue-600 dark:text-blue-400" />
+                                                </div>
+                                                <div className="flex-1">
+                                                  <h3 className="font-medium text-gray-900 dark:text-white">{agentName}</h3>
+                                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                    Web3 AI Agent • Created on {new Date().toLocaleDateString()}
+                                                  </p>
+                                                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                      <span className="block text-gray-500 dark:text-gray-400">Network</span>
+                                                      <span className="font-medium text-gray-900 dark:text-white">Ethereum, Polygon</span>
+                                                    </div>
+                                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                                      <span className="block text-gray-500 dark:text-gray-400">Capabilities</span>
+                                                      <span className="font-medium text-gray-900 dark:text-white">Transactions, Monitoring</span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                        
+                                      {/* Chat messages */}
+                                      <div 
+                                        ref={chatContainerRef}
+                                        className="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-800/30"
+                                      >
+                                        <AnimatePresence>
+                                          {messages.map((message, index) => (
+                                            <motion.div
+                                              key={index}
+                                              initial={{ opacity: 0, y: 10 }}
+                                              animate={{ opacity: 1, y: 0 }}
+                                              transition={{ duration: 0.3 }}
+                                              className={`flex ${
+                                                message.sender === "user"
+                                                  ? "justify-end"
+                                                  : "justify-start"
+                                              } mb-3`}
+                                            >
+                                              {message.sender === "agent" && (
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                                                  <Bot size={16} className="text-blue-600 dark:text-blue-400" />
+                                                </div>
+                                              )}
+                                              <div
+                                                className={`max-w-[75%] p-3 rounded-2xl shadow-sm ${
+                                                  message.sender === "user"
+                                                    ? "bg-blue-600 text-white rounded-tr-none"
+                                                    : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-tl-none"
+                                                }`}
+                                              >
+                                                <p className="text-sm sm:text-base">{message.text}</p>
+                                                <p
+                                                  className={`text-xs mt-1 ${
+                                                    message.sender === "user"
+                                                      ? "text-blue-200"
+                                                      : "text-gray-500 dark:text-gray-400"
+                                                  }`}
+                                                >
+                                                  {message.timestamp.toLocaleTimeString([], {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                  })}
+                                                </p>
+                                              </div>
+                                              {message.sender === "user" && (
+                                                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center ml-2 flex-shrink-0 mt-1">
+                                                  <User size={16} className="text-white" />
+                                                </div>
+                                              )}
+                                            </motion.div>
+                                          ))}
+                        
+                                          {isTyping && (
+                                            <motion.div
+                                              initial={{ opacity: 0, y: 10 }}
+                                              animate={{ opacity: 1, y: 0 }}
+                                              className="flex justify-start mb-3"
+                                            >
+                                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                                                <Bot size={16} className="text-blue-600 dark:text-blue-400" />
+                                              </div>
+                                              <div className="p-3 rounded-2xl rounded-tl-none bg-white dark:bg-gray-700 shadow-sm">
+                                                <div className="flex gap-1">
+                                                  <div
+                                                    className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
+                                                    style={{ animationDelay: "0ms" }}
+                                                  ></div>
+                                                  <div
+                                                    className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
+                                                    style={{ animationDelay: "150ms" }}
+                                                  ></div>
+                                                  <div
+                                                    className="w-2 h-2 rounded-full bg-gray-500 dark:bg-gray-400 animate-bounce"
+                                                    style={{ animationDelay: "300ms" }}
+                                                  ></div>
+                                                </div>
+                                              </div>
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                        <div ref={messagesEndRef} />
+                                      </div>
+                        
+                                      {/* Message input */}
+                                      <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+                                        <div className="flex gap-3 items-center">
+                                          <input
+                                            ref={chatInputRef}
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            placeholder="Type your message..."
+                                            className="flex-1 px-4 py-3 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 transition-all text-gray-900 dark:text-white"
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter") handleSendMessage();
+                                            }}
+                                          />
+                                          <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={handleSendMessage}
+                                            disabled={!newMessage.trim()}
+                                            className={`p-3 rounded-full flex items-center justify-center ${
+                                              !newMessage.trim()
+                                                ? "bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                                            } transition-colors`}
+                                          >
+                                            <Send size={18} />
+                                          </motion.button>
+                                        </div>
+                                        <div className="mt-2 flex justify-center">
+                                          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                            <Shield size={12} />
+                                            <span>End-to-end encrypted • Powered by blockchain</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </motion.div>
+                              </main>
+                        
+                              {/* Footer */}
+                              <footer className="py-6 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                                  <div className="flex flex-col md:flex-row justify-between items-center">
+                                    <div className="flex items-center gap-3 mb-4 md:mb-0">
+                                      <div className="w-8 h-8 relative">
+                                        <Image src="/images.png" alt="ETH Taipei" fill className="object-contain" />
+                                      </div>
+                                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        ETH Taipei AI Agents
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+                                      <Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                                        About
+                                      </Link>
+                                      <Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                                        Documentation
+                                      </Link>
+                                      <Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                                        Privacy
+                                      </Link>
+                                      <div className="flex items-center gap-2">
+                                        <Shield size={14} />
+                                        <span>ETH Taipei AI Agents © 2023</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </footer>
+                            </div>
+                          );
+                        }
+                        
