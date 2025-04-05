@@ -244,115 +244,137 @@ export default function ApiKeys() {
   };
 
   // Handle form submission
-  const handleSubmit = async () => {
-    // Reset any previous errors
-    setUploadError(null);
+ // Update the handleSubmit function to include the API call
+const handleSubmit = async () => {
+  // Reset any previous errors
+  setUploadError(null);
 
-    // Validate that all required API keys are provided
-    const newValidationErrors: Record<number, Record<string, boolean>> = {};
-    let hasError = false;
+  // Validate that all required API keys are provided
+  const newValidationErrors: Record<number, Record<string, boolean>> = {};
+  let hasError = false;
 
-    selectedMCPs.forEach((mcp) => {
-      const requiredKeys = mcpRequiredKeys[mcp.id] || [];
+  selectedMCPs.forEach((mcp) => {
+    const requiredKeys = mcpRequiredKeys[mcp.id] || [];
 
-      // Skip validation for MCPs that don't require keys (like desktop-commander)
-      if (requiredKeys.length === 0) return;
+    // Skip validation for MCPs that don't require keys (like desktop-commander)
+    if (requiredKeys.length === 0) return;
 
-      newValidationErrors[mcp.id] = {};
+    newValidationErrors[mcp.id] = {};
 
-      requiredKeys.forEach((key) => {
-        if (!apiKeys[mcp.id]?.[key.name]?.trim()) {
-          newValidationErrors[mcp.id][key.name] = true;
-          hasError = true;
-        }
-      });
-    });
-
-    if (hasError) {
-      setValidationErrors(newValidationErrors);
-
-      // Shake the form to indicate error
-      const form = document.getElementById("api-keys-form");
-      if (form) {
-        form.classList.add("shake-animation");
-        setTimeout(() => {
-          form.classList.remove("shake-animation");
-        }, 500);
+    requiredKeys.forEach((key) => {
+      if (!apiKeys[mcp.id]?.[key.name]?.trim()) {
+        newValidationErrors[mcp.id][key.name] = true;
+        hasError = true;
       }
+    });
+  });
 
+  if (hasError) {
+    setValidationErrors(newValidationErrors);
+
+    // Shake the form to indicate error
+    const form = document.getElementById("api-keys-form");
+    if (form) {
+      form.classList.add("shake-animation");
+      setTimeout(() => {
+        form.classList.remove("shake-animation");
+      }, 500);
+    }
+
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  // Simulate progress
+  const progressInterval = setInterval(() => {
+    setProgress((prev) => {
+      if (prev >= 95) {
+        return 95; // Hold at 95% until IPFS upload completes
+      }
+      return prev + 5;
+    });
+  }, 50);
+
+  try {
+    // Prepare data for IPFS
+    const agentData = {
+      name: agentName,
+      invocationType: invocationType,
+      mcps: selectedMCPs.map((mcp) => {
+        // Get the API keys for this MCP
+        const keys = apiKeys[mcp.id] || {};
+
+        return {
+          id: mcp.id,
+          name: mcp.name,
+          description: mcp.description,
+          color: mcp.color,
+          apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
+        };
+      }),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Upload to Pinata
+    const hash = await uploadToPinata(agentData);
+    setIpfsHash(hash);
+    console.log("Agent data uploaded to IPFS with hash:", hash);
+
+    // Store the IPFS hash in localStorage for later use
+    localStorage.setItem("agentIpfsHash", hash);
+
+    // Clear the progress interval since we're done with the upload
+    clearInterval(progressInterval);
+    setProgress(100);
+
+    // Send the IPFS hash to the API
+    try {
+      const apiResponse = await axios.post(
+        `${process.env.NEXT_PUBLIC_MCP_API_ENDPOINT}/update_mcp_config`,
+        { ipfs_hash: hash },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("API response:", apiResponse.data);
+    } catch (apiError) {
+      console.error("Error sending IPFS hash to API:", apiError);
+      setUploadError(
+        "Successfully uploaded to IPFS, but failed to update MCP config. Please try again."
+      );
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
+    // Wait a moment to show the 100% progress
+    setTimeout(() => {
+      // Clear the temporary storage since we're done with the creation process
+      localStorage.removeItem("agentCreationData");
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          return 95; // Hold at 95% until IPFS upload completes
-        }
-        return prev + 5;
-      });
-    }, 50);
-
-    try {
-      // Prepare data for IPFS
-      const agentData = {
-        name: agentName,
-        invocationType: invocationType,
-        mcps: selectedMCPs.map((mcp) => {
-          // Get the API keys for this MCP
-          const keys = apiKeys[mcp.id] || {};
-
-          return {
-            id: mcp.id,
-            name: mcp.name,
-            description: mcp.description,
-            color: mcp.color,
-            apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
-          };
-        }),
-        createdAt: new Date().toISOString(),
-      };
-
-      // Upload to Pinata
-      const hash = await uploadToPinata(agentData);
-      setIpfsHash(hash);
-      console.log("Agent data uploaded to IPFS with hash:", hash);
-
-      // Store the IPFS hash in localStorage for later use
-      localStorage.setItem("agentIpfsHash", hash);
-
-      // Clear the progress interval since we're done with the upload
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      // Wait a moment to show the 100% progress
-      setTimeout(() => {
-        // Clear the temporary storage since we're done with the creation process
-        localStorage.removeItem("agentCreationData");
-
-        setIsSubmitting(false);
-        // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
-        router.push(
-          `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
-        );
-      }, 500);
-    } catch (error) {
-      console.error("Error uploading to IPFS:", error);
-
-      // Clear the progress interval
-      clearInterval(progressInterval);
-
-      // Show an error message
-      setUploadError(
-        "Failed to upload agent data to IPFS. Please check your network connection and try again."
-      );
-
-      setProgress(0);
       setIsSubmitting(false);
-    }
-  };
+      // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
+      router.push(
+        `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
+      );
+    }, 500);
+  } catch (error) {
+    console.error("Error uploading to IPFS:", error);
+
+    // Clear the progress interval
+    clearInterval(progressInterval);
+
+    // Show an error message
+    setUploadError(
+      "Failed to upload agent data to IPFS. Please check your network connection and try again."
+    );
+
+    setProgress(0);
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

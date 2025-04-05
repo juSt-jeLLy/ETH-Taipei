@@ -5,6 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { ethers } from "ethers";
+import axios from "axios";
+import NavBar from "../components/NavBar";
+import { BrowserProvider } from "ethers";
 import {
   Bot,
   Shield,
@@ -19,50 +23,93 @@ import {
   Settings,
   ExternalLink,
 } from "lucide-react";
-import NavBar from "../components/NavBar";
 
-// Mock agent data
-const mockAgents = [
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
+
+
+const AgentNFT = [
   {
-    id: 1,
-    name: "ethTrader.eth",
-    description: "Monitors ETH price and executes trades based on conditions",
-    type: "polling",
-    networks: ["Ethereum", "Arbitrum"],
-    lastActive: "2 minutes ago",
-    status: "active",
-    color: "blue",
+    inputs: [],
+    name: "getAllAgents",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "string",
+            name: "ipfsHash",
+            type: "string",
+          },
+          {
+            internalType: "address",
+            name: "owner",
+            type: "address",
+          },
+          {
+            internalType: "bool",
+            name: "exists",
+            type: "bool",
+          },
+        ],
+        internalType: "struct AgentNFT.Agent[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    id: 2,
-    name: "gasWatcher.eth",
-    description: "Alerts when gas prices are low for pending transactions",
-    type: "ping",
-    networks: ["Ethereum", "Polygon", "Optimism"],
-    lastActive: "1 hour ago",
-    status: "active",
-    color: "purple",
+    inputs: [
+      {
+        internalType: "address",
+        name: "user",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "ipfsHash",
+        type: "string",
+      },
+    ],
+    name: "hasAccess",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
   },
   {
-    id: 3,
-    name: "nftSniper.eth",
-    description: "Monitors NFT floor prices and executes buys",
-    type: "polling",
-    networks: ["Ethereum", "Base"],
-    lastActive: "3 days ago",
-    status: "inactive",
-    color: "green",
+    inputs: [
+      {
+        internalType: "string",
+        name: "ipfsHash",
+        type: "string",
+      },
+    ],
+    name: "requestAccess",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
   },
 ];
 
-// Animation variants
+interface IpfsData {
+  name: string;
+  description: string;
+  type: string;
+  networks: string[];
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.1 },
   },
 };
 
@@ -83,8 +130,68 @@ export default function MyAgents() {
   const [isLoading, setIsLoading] = useState(true);
   const [hoveringAgent, setHoveringAgent] = useState<number | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
+  const cache: Record<string, any[]> = {};
 
-  // Check if wallet is connected
+  const fetchIpfsData = async (ipfsHash: string): Promise<IpfsData> => {
+    try {
+      const response = await axios.get(`${IPFS_GATEWAY}${ipfsHash}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching IPFS data:", error);
+      return {
+        name: "Unknown Agent",
+        description: "Description unavailable",
+        type: "polling",
+        networks: ["Ethereum"],
+      };
+    }
+  };
+
+  const fetchAgents = async () => {
+    if (cache["agents"]) {
+      setAgents(cache["agents"]);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const provider = new BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESS!,
+        AgentNFT,
+        provider
+      );
+
+      const allAgents = await contract.getAllAgents();
+
+      const formattedAgents = await Promise.all(
+        allAgents.map(async (agent, index) => {
+          const ipfsData = await fetchIpfsData(agent.ipfsHash);
+
+          return {
+            id: index + 1,
+            name: ipfsData.name,
+            description: ipfsData.description,
+            type: ipfsData.type,
+            networks: ipfsData.networks,
+            lastActive: "Recently",
+            status: agent.exists ? "active" : "inactive",
+            color: ["blue", "purple", "green"][Math.floor(Math.random() * 3)],
+            ipfsHash: agent.ipfsHash,
+            owner: agent.owner,
+          };
+        })
+      );
+
+      cache["agents"] = formattedAgents;
+      setAgents(formattedAgents);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const isConnected = localStorage.getItem("walletConnected") === "true";
     const address = localStorage.getItem("walletAddress");
@@ -92,45 +199,15 @@ export default function MyAgents() {
     if (isConnected && address) {
       setWalletConnected(true);
       setWalletAddress(address);
-
-      // Simulate loading agents with a progress effect
-      const loadingTimer = setTimeout(() => {
-        setAgents(mockAgents);
-        setIsLoading(false);
-      }, 1500);
-
-      return () => clearTimeout(loadingTimer);
+      fetchAgents();
+      const interval = setInterval(fetchAgents, 10000);
+      return () => clearInterval(interval);
     } else {
       setIsLoading(false);
     }
   }, []);
-
-  // Handle chat with agent
-  const handleChatWithAgent = (agentName) => {
-    router.push(`/FindAgent?name=${encodeURIComponent(agentName)}`);
-  };
-
-  // Toggle expanded agent view
   const toggleExpandAgent = (id: number) => {
     setExpandedAgent(expandedAgent === id ? null : id);
-  };
-
-  // Get network color
-  const getNetworkColor = (network: string) => {
-    switch (network) {
-      case "Ethereum":
-        return "blue";
-      case "Polygon":
-        return "purple";
-      case "Arbitrum":
-        return "indigo";
-      case "Optimism":
-        return "red";
-      case "Base":
-        return "green";
-      default:
-        return "gray";
-    }
   };
 
   return (
@@ -558,27 +635,42 @@ export default function MyAgents() {
                         {agent.description}
                       </p>
 
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {agent.networks.map((network, idx) => (
-                          <motion.span
-                            key={idx}
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              getNetworkColor(network) === "blue"
-                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                                : getNetworkColor(network) === "purple"
-                                ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                                : getNetworkColor(network) === "green"
-                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                                : getNetworkColor(network) === "red"
-                                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                                : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                            }`}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 400 }}
-                          >
-                            {network}
-                          </motion.span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {agents.map((agent, index) => (
+                          <motion.div key={agent.id}>
+                            {/* Other agent card content */}
+
+                            {/* Add the networks section here */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {agent.networks &&
+                                agent.networks.map((network, idx) => (
+                                  <motion.span
+                                    key={idx}
+                                    className={`text-xs px-2 py-1 rounded-full ${
+                                      getNetworkColor(network) === "blue"
+                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                        : getNetworkColor(network) === "purple"
+                                        ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                                        : getNetworkColor(network) === "green"
+                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                        : getNetworkColor(network) === "red"
+                                        ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                                    }`}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    transition={{
+                                      type: "spring",
+                                      stiffness: 300,
+                                    }}
+                                  >
+                                    {network}
+                                  </motion.span>
+                                ))}
+                            </div>
+
+                            {/* Continue with other agent card content */}
+                          </motion.div>
                         ))}
                       </div>
 

@@ -15,6 +15,7 @@
     "aes-encryption": "^1.0.4",
     "axios": "^1.8.4",
     "crypto-js": "^4.2.0",
+    "ethers": "^6.13.5",
     "framer-motion": "^12.6.3",
     "js-crypto-aes": "^1.0.6",
     "lucide-react": "^0.487.0",
