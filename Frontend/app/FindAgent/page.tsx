@@ -153,24 +153,35 @@ export default function FindAgent() {
 
     setIsSearching(true);
 
+    // Check if user has access to this agent in session storage
+    const accessibleAgents = JSON.parse(sessionStorage.getItem('accessibleAgents') || '[]');
+    const hasAccess = accessibleAgents.some(
+      (agent: any) => agent.name === agentName && agent.accessGranted
+    );
+
+    if (hasAccess) {
+      // User has access, redirect to agent chat
+      window.location.href = `/FindAgent/${agentName}`;
+      return;
+    }
+
     // Simulate search delay
     setTimeout(() => {
       setIsSearching(false);
-      setAgentFound(true);
-
-      // Add welcome message from agent
-      setMessages([
-        {
-          sender: "agent",
-          text: `Hello! I'm ${agentName}, your Web3 AI agent. How can I assist you today?`,
-          timestamp: new Date(),
-        },
-      ]);
-
-      // Focus on chat input
-      setTimeout(() => {
-        chatInputRef.current?.focus();
-      }, 100);
+      
+      // Check if the agent name exists in our system
+      // This is a mock implementation - in a real app you would check against your database
+      const agentExists = true; // Mocked as true for demo purposes
+      
+      if (agentExists) {
+        // Agent exists but user doesn't have access
+        alert('You need to request access to this agent. Please go to My Agents page and request access.');
+        window.location.href = '/MyAgents';
+      } else {
+        // Agent not found
+        setAgentFound(false);
+        alert('Agent not found. Please check the name or create a new agent.');
+      }
     }, 1500);
   };
 

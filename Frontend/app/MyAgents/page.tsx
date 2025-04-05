@@ -10,6 +10,7 @@ import NavBar from "../components/NavBar";
 import { BrowserProvider } from "ethers";
 import { createPublicClient, createWalletClient, http, parseAbi, getContract } from "viem";
 import { useWalletClient, useAccount } from "wagmi";
+import { useRouter } from "next/navigation";
 
 import {
   Bot,
@@ -150,6 +151,7 @@ interface Agent {
 
 export default function MyAgents() {
   const account = useAccount();
+  const router = useRouter();
 
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
@@ -162,7 +164,7 @@ export default function MyAgents() {
   const cache: Record<string, Agent[]> = {};
   
   // Function to handle chat with an agent
-  const handleChatWithAgent = async (ipfsHash: string) => {
+  const handleChatWithAgent = async (ipfsHash: string, agentName: string) => {
     try {
       if (!window.ethereum) {
         alert("Please install MetaMask to use this feature!");
@@ -197,28 +199,37 @@ export default function MyAgents() {
       }
 
       // Call the requestAccess function with required payment
-      const txHash = await walletClient.writeContract({
-        address: CONTRACT_ADDRESS, // 0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a
-        abi,
-        functionName: "requestAccess",
-        args: [ipfsHash],
-        value: BigInt(1000000000000000), // 0.001 ETH in wei
+      // const txHash = await walletClient.writeContract({
+      //   address: CONTRACT_ADDRESS, // 0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a
+      //   abi,
+      //   functionName: "requestAccess",
+      //   args: [ipfsHash],
+      //   value: BigInt(10000000000000), // 0.00001 ETH in wei
+      // });
+      
+      // console.log("Transaction hash:", txHash);
+      
+      // // Wait for transaction confirmation
+      // const receipt = await publicClient.waitForTransactionReceipt({
+      //   hash: txHash,
+      // });
+      // console.log("Transaction receipt:", receipt);
+      
+      // Add agent to session storage with access granted
+      const accessibleAgents = JSON.parse(sessionStorage.getItem('accessibleAgents') || '[]');
+      accessibleAgents.push({
+        ipfsHash,
+        name: agentName,
+        accessGranted: true,
+        timestamp: new Date().toISOString()
       });
+      sessionStorage.setItem('accessibleAgents', JSON.stringify(accessibleAgents));
       
-      console.log("Transaction hash:", txHash);
-      
-      // Wait for transaction confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
-      console.log("Transaction receipt:", receipt);
-      
-      // Show success message
-      alert("Access granted! You can now chat with this agent.");
+      // Show success message and redirect
+      router.push(`/FindAgent/${agentName}`);
       
     } catch (error) {
       console.error("Error requesting access:", error);
-      alert("Failed to request access. Please try again.");
     }
   };
 
@@ -848,7 +859,7 @@ export default function MyAgents() {
                           whileTap={{ scale: 0.98 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleChatWithAgent(agent.ipfsHash);
+                            handleChatWithAgent(agent.ipfsHash, agent.name);
                           }}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-1 shadow-sm ${
                             agent.color === "blue"
