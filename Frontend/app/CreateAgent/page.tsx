@@ -25,48 +25,48 @@ import NavBar from "../components/NavBar";
 const mcpOptions = [
   {
     id: 1,
-    name: "hyperbrowser",
-    icon: "/189776885.png",
-
-    color: "blue",
+    name: "1inch-mcp",
+    icon: "/download.png",
+    description: "DeFi integration",
+    color: "green",
   },
+
   {
     id: 2,
     name: "claude-code-mcp",
     icon: "/images.png",
-
+    description: "Code generation and analysis",
     color: "purple",
   },
   {
     id: 3,
     name: "google-maps",
     icon: "/download.jpeg",
-
+    description: "Location and mapping services",
     color: "indigo",
   },
   {
     id: 4,
     name: "desktop-commander",
     icon: "/image1.jpeg",
-
+    description: "Desktop automation",
     color: "red",
   },
   {
     id: 5,
     name: "twitter-mcp",
     icon: "/Artboard-1twitter.webp",
-
+    description: "Twitter integration",
     color: "green",
   },
   {
     id: 6,
-    name: "1inch-mcp",
-    icon: "/download.png",
-
-    color: "green",
+    name: "hyperbrowser",
+    icon: "/images.png",
+    description: "Web browsing capabilities",
+    color: "blue",
   },
 ];
-
 export default function CreateAgent() {
   const router = useRouter();
   const [agentName, setAgentName] = useState("");
@@ -201,52 +201,51 @@ export default function CreateAgent() {
     }
   };
 
- // In the handleCreateAgent function, add localStorage storage before navigation
-const handleCreateAgent = () => {
-  // Validate ENS name before proceeding
-  const error = validateENSName(agentName);
-  if (error) {
-    setNameError(error);
-    return;
-  }
+  // In the handleCreateAgent function, add localStorage storage before navigation
+  const handleCreateAgent = () => {
+    // Validate ENS name before proceeding
+    const error = validateENSName(agentName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
 
-  if (selectedMCPs.length === 0) {
-    alert("Please select at least one MCP");
-    return;
-  }
+    if (selectedMCPs.length === 0) {
+      alert("Please select at least one MCP");
+      return;
+    }
 
-  // Show loading state
-  setIsCreating(true);
+    // Show loading state
+    setIsCreating(true);
 
-  // Store the data in localStorage as JSON
-  const agentData = {
-    agentName,
-    invocationType,
-    selectedMCPs: selectedMCPs.map(mcpId => {
-      const mcp = mcpOptions.find(m => m.id === mcpId);
-      return {
-        id: mcpId,
-        name: mcp?.name || "",
-        icon: mcp?.icon || "",
-        color: mcp?.color || ""
-      };
-    })
+    // Store the data in localStorage as JSON
+    const agentData = {
+      agentName,
+      invocationType,
+      selectedMCPs: selectedMCPs.map((mcpId) => {
+        const mcp = mcpOptions.find((m) => m.id === mcpId);
+        return {
+          id: mcpId,
+          name: mcp?.name || "",
+          icon: mcp?.icon || "",
+          color: mcp?.color || "",
+        };
+      }),
+    };
+
+    localStorage.setItem("agentCreationData", JSON.stringify(agentData));
+
+    // Simulate loading
+    setTimeout(() => {
+      // Navigate to the API keys page with the current selections as query parameters
+      const selectedMCPsString = selectedMCPs.join(",");
+      router.push(
+        `/CreateAgent/api-keys?name=${encodeURIComponent(
+          agentName
+        )}&type=${invocationType}&mcps=${selectedMCPsString}`
+      );
+    }, 800);
   };
-  
-  localStorage.setItem('agentCreationData', JSON.stringify(agentData));
-
-  // Simulate loading
-  setTimeout(() => {
-    // Navigate to the API keys page with the current selections as query parameters
-    const selectedMCPsString = selectedMCPs.join(",");
-    router.push(
-      `/CreateAgent/api-keys?name=${encodeURIComponent(
-        agentName
-      )}&type=${invocationType}&mcps=${selectedMCPsString}`
-    );
-  }, 800);
-};
-
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

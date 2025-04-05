@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
+import CryptoJS from "crypto-js";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,6 +22,7 @@ import {
   EyeOff,
   ChevronRight,
   Database,
+  Cloud,
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
 
@@ -64,6 +67,7 @@ const mcpOptions = [
     id: 6,
     name: "1inch-mcp",
     icon: "/download.png",
+    description: "DeFi integration",
     color: "green",
   },
 ];
@@ -81,6 +85,87 @@ const mcpRequiredKeys = {
     { name: "ACCESS_TOKEN_SECRET", label: "Access Token Secret" },
   ],
   6: [{ name: "1INCH_API_KEY", label: "API Key" }],
+};
+
+// Function to encrypt API keys with AES
+const encryptApiKeys = (data, encryptionKey = "123") => {
+  // Create a deep copy of the data to avoid modifying the original
+  const encryptedData = JSON.parse(JSON.stringify(data));
+
+  // Encrypt API keys for each MCP
+  encryptedData.mcps.forEach((mcp) => {
+    // Skip if no API keys or desktop-commander (which doesn't need keys)
+    if (!mcp.apiKeys || mcp.id === 4) return;
+
+    // Encrypt each API key
+    Object.keys(mcp.apiKeys).forEach((keyName) => {
+      const value = mcp.apiKeys[keyName];
+      if (value) {
+        // Encrypt the value using AES
+        mcp.apiKeys[keyName] = CryptoJS.AES.encrypt(
+          value,
+          encryptionKey
+        ).toString();
+      }
+    });
+  });
+
+  return encryptedData;
+};
+
+// Function to decrypt API keys (for testing purposes)
+const decryptApiKeys = (data, encryptionKey = "123") => {
+  // Create a deep copy of the data to avoid modifying the original
+  const decryptedData = JSON.parse(JSON.stringify(data));
+
+  // Decrypt API keys for each MCP
+  decryptedData.mcps.forEach((mcp) => {
+    // Skip if no API keys or desktop-commander
+    if (!mcp.apiKeys || mcp.id === 4) return;
+
+    // Decrypt each API key
+    Object.keys(mcp.apiKeys).forEach((keyName) => {
+      const encryptedValue = mcp.apiKeys[keyName];
+      if (encryptedValue) {
+        // Decrypt the value using AES
+        try {
+          const bytes = CryptoJS.AES.decrypt(encryptedValue, encryptionKey);
+          mcp.apiKeys[keyName] = bytes.toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+          console.error(`Failed to decrypt ${keyName}:`, error);
+          // Keep the encrypted value if decryption fails
+        }
+      }
+    });
+  });
+
+  return decryptedData;
+};
+
+// Function to upload data to Pinata
+const uploadToPinata = async (data) => {
+  try {
+    const formData = new FormData();
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    formData.append("file", blob);
+
+    const response = await axios.post(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          pinata_api_key: process.env.NEXT_PUBLIC_PINATA_API_KEY,
+          pinata_secret_api_key: process.env.NEXT_PUBLIC_PINATA_SECRET_API_KEY,
+        },
+      }
+    );
+
+    return response.data.IpfsHash;
+  } catch (error) {
+    console.error("Error uploading to Pinata:", error);
+    throw error;
+  }
 };
 
 // Animation variants
@@ -127,6 +212,8 @@ export default function ApiKeys() {
     Record<number, Record<string, boolean>>
   >({});
   const [progress, setProgress] = useState(0);
+  const [ipfsHash, setIpfsHash] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Filter to only show selected MCPs
   const selectedMCPs = mcpOptions.filter((mcp) =>
@@ -212,7 +299,10 @@ export default function ApiKeys() {
   };
 
   // Handle form submission
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Reset any previous errors
+    setUploadError(null);
+
     // Validate that all required API keys are provided
     const newValidationErrors: Record<number, Record<string, boolean>> = {};
     let hasError = false;
@@ -253,29 +343,83 @@ export default function ApiKeys() {
     // Simulate progress
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
+        if (prev >= 95) {
+          return 95; // Hold at 95% until IPFS upload completes
         }
         return prev + 5;
       });
     }, 50);
 
-    // Here you would typically send the data to your backend
-    // For now, we'll just simulate a submission
-    setTimeout(() => {
+    try {
+      // Prepare data for IPFS
+      const agentData = {
+        name: agentName,
+        invocationType: invocationType,
+        mcps: selectedMCPs.map((mcp) => {
+          // Get the API keys for this MCP
+          const keys = apiKeys[mcp.id] || {};
+
+          return {
+            id: mcp.id,
+            name: mcp.name,
+            description: mcp.description,
+            color: mcp.color,
+            apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
+          };
+        }),
+        createdAt: new Date().toISOString(),
+        isEncrypted: true, // Add a flag to indicate encryption
+      };
+
+      // Encrypt the API keys with AES using the key '123'
+      const encryptedData = encryptApiKeys(agentData, "123");
+
+      // Add metadata about encryption
+      encryptedData.encryptionInfo = {
+        method: "AES",
+        timestamp: new Date().toISOString(),
+      };
+
+      // Upload to Pinata
+      const hash = await uploadToPinata(encryptedData);
+      setIpfsHash(hash);
+      console.log("Encrypted agent data uploaded to IPFS with hash:", hash);
+
+      // Store the IPFS hash in localStorage for later use
+      localStorage.setItem("agentIpfsHash", hash);
+
+      // Also store the encryption key securely (in a real app, this should be handled more securely)
+      localStorage.setItem("encryptionKey", "123");
+
+      // Clear the progress interval since we're done with the upload
       clearInterval(progressInterval);
       setProgress(100);
 
+      // Wait a moment to show the 100% progress
       setTimeout(() => {
         // Clear the temporary storage since we're done with the creation process
         localStorage.removeItem("agentCreationData");
 
         setIsSubmitting(false);
-        // Navigate to FindAgent page with the agent name as a query parameter
-        router.push(`/FindAgent?name=${encodeURIComponent(agentName)}`);
+        // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
+        router.push(
+          `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
+        );
       }, 500);
-    }, 1500);
+    } catch (error) {
+      console.error("Error uploading to IPFS:", error);
+
+      // Clear the progress interval
+      clearInterval(progressInterval);
+
+      // Show an error message
+      setUploadError(
+        "Failed to upload encrypted agent data to IPFS. Please check your network connection and try again."
+      );
+
+      setProgress(0);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -384,10 +528,35 @@ export default function ApiKeys() {
                   <p className="text-blue-600 dark:text-blue-400 text-sm">
                     Please provide API keys for each of the selected MCPs to
                     complete your agent setup. Your keys are encrypted and
-                    stored securely.
+                    stored securely on IPFS.
                   </p>
                 </div>
               </motion.div>
+
+              {/* Display upload error if any */}
+              <AnimatePresence>
+                {uploadError && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 flex items-start gap-3"
+                  >
+                    <AlertCircle
+                      className="text-red-600 dark:text-red-400 mt-0.5"
+                      size={18}
+                    />
+                    <div>
+                      <p className="text-red-800 dark:text-red-300 font-medium">
+                        Upload Error
+                      </p>
+                      <p className="text-red-600 dark:text-red-400 text-sm">
+                        {uploadError}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {selectedMCPs.map((mcp, index) => (
                 <motion.div
@@ -416,18 +585,18 @@ export default function ApiKeys() {
                             ? "red"
                             : "indigo"
                         }-200 
-                         dark:border-${
-                           mcp.color === "blue"
-                             ? "blue"
-                             : mcp.color === "purple"
-                             ? "purple"
-                             : mcp.color === "green"
-                             ? "green"
-                             : mcp.color === "red"
-                             ? "red"
-                             : "indigo"
-                         }-700 
-                         bg-white dark:bg-gray-800`
+                   dark:border-${
+                     mcp.color === "blue"
+                       ? "blue"
+                       : mcp.color === "purple"
+                       ? "purple"
+                       : mcp.color === "green"
+                       ? "green"
+                       : mcp.color === "red"
+                       ? "red"
+                       : "indigo"
+                   }-700 
+                   bg-white dark:bg-gray-800`
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -443,17 +612,17 @@ export default function ApiKeys() {
                           ? "red"
                           : "indigo"
                       }-100 
-                      dark:bg-${
-                        mcp.color === "blue"
-                          ? "blue"
-                          : mcp.color === "purple"
-                          ? "purple"
-                          : mcp.color === "green"
-                          ? "green"
-                          : mcp.color === "red"
-                          ? "red"
-                          : "indigo"
-                      }-900/30 p-1`}
+                dark:bg-${
+                  mcp.color === "blue"
+                    ? "blue"
+                    : mcp.color === "purple"
+                    ? "purple"
+                    : mcp.color === "green"
+                    ? "green"
+                    : mcp.color === "red"
+                    ? "red"
+                    : "indigo"
+                }-900/30 p-1`}
                       animate={
                         hoveringMCP === mcp.id
                           ? {
@@ -484,17 +653,17 @@ export default function ApiKeys() {
                             ? "red"
                             : "indigo"
                         }-600 
-                        dark:text-${
-                          mcp.color === "blue"
-                            ? "blue"
-                            : mcp.color === "purple"
-                            ? "purple"
-                            : mcp.color === "green"
-                            ? "green"
-                            : mcp.color === "red"
-                            ? "red"
-                            : "indigo"
-                        }-400`}
+                  dark:text-${
+                    mcp.color === "blue"
+                      ? "blue"
+                      : mcp.color === "purple"
+                      ? "purple"
+                      : mcp.color === "green"
+                      ? "green"
+                      : mcp.color === "red"
+                      ? "red"
+                      : "indigo"
+                  }-400`}
                         animate={
                           hoveringMCP === mcp.id ? { scale: [1, 1.03, 1] } : {}
                         }
@@ -555,39 +724,39 @@ export default function ApiKeys() {
                                           ? "red"
                                           : "indigo"
                                       }-300 
-                                     dark:border-${
-                                       mcp.color === "blue"
-                                         ? "blue"
-                                         : mcp.color === "purple"
-                                         ? "purple"
-                                         : mcp.color === "green"
-                                         ? "green"
-                                         : mcp.color === "red"
-                                         ? "red"
-                                         : "indigo"
-                                     }-700 
-                                     focus:ring-${
-                                       mcp.color === "blue"
-                                         ? "blue"
-                                         : mcp.color === "purple"
-                                         ? "purple"
-                                         : mcp.color === "green"
-                                         ? "green"
-                                         : mcp.color === "red"
-                                         ? "red"
-                                         : "indigo"
-                                     }-400 
-                                     dark:focus:ring-${
-                                       mcp.color === "blue"
-                                         ? "blue"
-                                         : mcp.color === "purple"
-                                         ? "purple"
-                                         : mcp.color === "green"
-                                         ? "green"
-                                         : mcp.color === "red"
-                                         ? "red"
-                                         : "indigo"
-                                     }-600`
+                               dark:border-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-700 
+                               focus:ring-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-400 
+                               dark:focus:ring-${
+                                 mcp.color === "blue"
+                                   ? "blue"
+                                   : mcp.color === "purple"
+                                   ? "purple"
+                                   : mcp.color === "green"
+                                   ? "green"
+                                   : mcp.color === "red"
+                                   ? "red"
+                                   : "indigo"
+                               }-600`
                                 } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
                                 whileFocus={{ scale: 1.01 }}
                               />
@@ -646,7 +815,7 @@ export default function ApiKeys() {
                                   className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 mt-1"
                                 >
                                   <AlertCircle size={14} />
-                                  <span>{keyInfo.label} is required</span>
+                                  <span>API key is required</span>
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -712,7 +881,11 @@ export default function ApiKeys() {
                             ease: "linear",
                           }}
                         />
-                        <span>Creating...</span>
+                        <span>
+                          {progress < 100
+                            ? "Encrypting & Uploading..."
+                            : "Creating..."}
+                        </span>
                       </div>
                       <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
                         <motion.div
@@ -725,8 +898,8 @@ export default function ApiKeys() {
                     </div>
                   ) : (
                     <>
-                      <Check size={18} />
-                      <span>Create Agent</span>
+                      <Cloud size={18} />
+                      <span>Encrypt & Upload</span>
                       <motion.div
                         animate={{ x: [0, 3, 0] }}
                         transition={{
@@ -741,6 +914,43 @@ export default function ApiKeys() {
                   )}
                 </motion.button>
               </motion.div>
+
+              {/* Show IPFS hash if available */}
+              <AnimatePresence>
+                {ipfsHash && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800"
+                  >
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium mb-1">
+                      <Check size={16} />
+                      <span>Successfully encrypted and uploaded to IPFS!</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <code className="text-xs bg-green-100 dark:bg-green-800/50 p-2 rounded font-mono text-green-800 dark:text-green-200 flex-1 overflow-x-auto">
+                        {ipfsHash}
+                      </code>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() =>
+                          copyToClipboard(-1, "ipfsHash", ipfsHash)
+                        }
+                        className="p-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+                      >
+                        {copiedKey?.mcpId === -1 &&
+                        copiedKey?.keyName === "ipfsHash" ? (
+                          <Check size={16} />
+                        ) : (
+                          <Copy size={16} />
+                        )}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </div>
         </motion.div>
