@@ -215,22 +215,22 @@ export default function MyAgents() {
         throw new Error("No wallet client available");
       }
 
-      // Call the requestAccess function with required payment
-      // const txHash = await walletClient.writeContract({
-      //   address: CONTRACT_ADDRESS, // 0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a
-      //   abi,
-      //   functionName: "requestAccess",
-      //   args: [ipfsHash],
-      //   value: BigInt(10000000000000), // 0.00001 ETH in wei
-      // });
+      //Call the requestAccess function with required payment
+      const txHash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS, // 0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a
+        abi,
+        functionName: "requestAccess",
+        args: [ipfsHash],
+        value: BigInt(10000000000000), // 0.00001 ETH in wei
+      });
       
-      // console.log("Transaction hash:", txHash);
+      console.log("Transaction hash:", txHash);
       
-      // // Wait for transaction confirmation
-      // const receipt = await publicClient.waitForTransactionReceipt({
-      //   hash: txHash,
-      // });
-      // console.log("Transaction receipt:", receipt);
+      // Wait for transaction confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+      console.log("Transaction receipt:", receipt);
       
       // Add agent to session storage with access granted
       const accessibleAgents = JSON.parse(sessionStorage.getItem('accessibleAgents') || '[]');
