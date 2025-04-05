@@ -25,37 +25,44 @@ import NavBar from "../components/NavBar";
 const mcpOptions = [
   {
     id: 1,
-    name: "Ethereum",
-    icon: "/images.png",
-    description: "Main Ethereum network",
+    name: "hyperbrowser",
+    icon: "/189776885.png",
+
     color: "blue",
   },
   {
     id: 2,
-    name: "Polygon",
+    name: "claude-code-mcp",
     icon: "/images.png",
-    description: "Scalable Ethereum solution",
+
     color: "purple",
   },
   {
     id: 3,
-    name: "Arbitrum",
-    icon: "/images.png",
-    description: "Layer 2 scaling solution",
+    name: "google-maps",
+    icon: "/download.jpeg",
+
     color: "indigo",
   },
   {
     id: 4,
-    name: "Optimism",
-    icon: "/images.png",
-    description: "Optimistic rollup solution",
+    name: "desktop-commander",
+    icon: "/image1.jpeg",
+
     color: "red",
   },
   {
     id: 5,
-    name: "Base",
-    icon: "/images.png",
-    description: "Coinbase L2 solution",
+    name: "twitter-mcp",
+    icon: "/Artboard-1twitter.webp",
+
+    color: "green",
+  },
+  {
+    id: 6,
+    name: "1inch-mcp",
+    icon: "/download.png",
+
     color: "green",
   },
 ];
@@ -194,34 +201,52 @@ export default function CreateAgent() {
     }
   };
 
-  const handleCreateAgent = () => {
-    // Validate ENS name before proceeding
-    const error = validateENSName(agentName);
-    if (error) {
-      setNameError(error);
-      return;
-    }
+ // In the handleCreateAgent function, add localStorage storage before navigation
+const handleCreateAgent = () => {
+  // Validate ENS name before proceeding
+  const error = validateENSName(agentName);
+  if (error) {
+    setNameError(error);
+    return;
+  }
 
-    if (selectedMCPs.length === 0) {
-      alert("Please select at least one MCP");
-      return;
-    }
+  if (selectedMCPs.length === 0) {
+    alert("Please select at least one MCP");
+    return;
+  }
 
-    // Show loading state
-    setIsCreating(true);
+  // Show loading state
+  setIsCreating(true);
 
-    // Simulate loading
-    setTimeout(() => {
-      // Instead of creating the agent directly, navigate to the API keys page
-      // with the current selections as query parameters
-      const selectedMCPsString = selectedMCPs.join(",");
-      router.push(
-        `/CreateAgent/api-keys?name=${encodeURIComponent(
-          agentName
-        )}&type=${invocationType}&mcps=${selectedMCPsString}`
-      );
-    }, 800);
+  // Store the data in localStorage as JSON
+  const agentData = {
+    agentName,
+    invocationType,
+    selectedMCPs: selectedMCPs.map(mcpId => {
+      const mcp = mcpOptions.find(m => m.id === mcpId);
+      return {
+        id: mcpId,
+        name: mcp?.name || "",
+        icon: mcp?.icon || "",
+        color: mcp?.color || ""
+      };
+    })
   };
+  
+  localStorage.setItem('agentCreationData', JSON.stringify(agentData));
+
+  // Simulate loading
+  setTimeout(() => {
+    // Navigate to the API keys page with the current selections as query parameters
+    const selectedMCPsString = selectedMCPs.join(",");
+    router.push(
+      `/CreateAgent/api-keys?name=${encodeURIComponent(
+        agentName
+      )}&type=${invocationType}&mcps=${selectedMCPsString}`
+    );
+  }, 800);
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -504,139 +529,183 @@ export default function CreateAgent() {
                 </div>
               </motion.div>
 
-             {/* Select MCPs */}
-<motion.div variants={itemVariants}>
-  <label className="flex items-center gap-2 text-sm font-medium mb-4 text-gray-700 dark:text-gray-300">
-    <motion.div
-      animate={{ rotate: [0, 360] }}
-      transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
-    >
-      <Layers size={16} />
-    </motion.div>
-    Select MCPs
-  </label>
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {mcpOptions.map((mcp) => (
-      <motion.div
-        key={mcp.id}
-        initial={{ opacity: 0.9 }}
-        whileHover={{
-          scale: 1.03,
-          y: -2,
-          boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-          backgroundColor: selectedMCPs.includes(mcp.id) 
-            ? `rgba(${mcp.color === 'blue' ? '239, 246, 255' : mcp.color === 'purple' ? '243, 232, 255' : mcp.color === 'green' ? '236, 253, 245' : mcp.color === 'red' ? '254, 242, 242' : '238, 242, 255'}, 0.3)`
-            : "rgba(249, 250, 251, 0.8)"
-        }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => toggleMCP(mcp.id)}
-        onMouseEnter={() => setHoveringMCP(mcp.id)}
-        onMouseLeave={() => setHoveringMCP(null)}
-        className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-300 ${
-          selectedMCPs.includes(mcp.id)
-            ? "border-gray-400 dark:border-blue-700 bg-gray-50 dark:bg-gray-800/80"
-            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800/50"
-        }`}
-      >
-        <div className="flex items-center gap-3 flex-1">
-          <motion.div
-            className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 p-1"
-            animate={{
-              rotate: selectedMCPs.includes(mcp.id) || hoveringMCP === mcp.id
-                ? [0, 10, 0]
-                : 0,
-              scale: selectedMCPs.includes(mcp.id) 
-                ? [1, 1.1, 1] 
-                : 1,
-              boxShadow: selectedMCPs.includes(mcp.id)
-                ? ["0 0 0 0 rgba(59, 130, 246, 0)", "0 0 0 4px rgba(59, 130, 246, 0.1)", "0 0 0 0 rgba(59, 130, 246, 0)"]
-                : "none"
-            }}
-            transition={{
-              duration: 0.5,
-              ease: "easeInOut",
-            }}
-          >
-            <Image
-              src={mcp.icon}
-              alt={mcp.name}
-              width={32}
-              height={32}
-            />
-          </motion.div>
-          <div>
-            <motion.div 
-              className={`font-medium text-base ${
-                mcp.color === 'blue' ? "text-blue-600 dark:text-blue-400" : 
-                mcp.color === 'purple' ? "text-purple-600 dark:text-purple-400" : 
-                mcp.color === 'green' ? "text-green-600 dark:text-green-400" : 
-                mcp.color === 'red' ? "text-red-600 dark:text-red-400" : 
-                "text-indigo-600 dark:text-indigo-400"
-              }`}
-              animate={{ 
-                scale: selectedMCPs.includes(mcp.id) ? [1, 1.05, 1] : 1,
-                opacity: selectedMCPs.includes(mcp.id) ? [0.9, 1, 0.9] : 0.9
-              }}
-              transition={{ duration: 2, repeat: selectedMCPs.includes(mcp.id) ? Infinity : 0, repeatType: "reverse" }}
-            >
-              {mcp.name}
-            </motion.div>
-            <div className="text-sm text-gray-500 dark:text-gray-300">
-              {mcp.description}
-            </div>
-          </div>
-        </div>
-        
-        {/* Selection indicator */}
-        <AnimatePresence>
-          {selectedMCPs.includes(mcp.id) && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 0.2, type: "spring" }}
-              className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                mcp.color === 'blue' ? "bg-blue-100 dark:bg-blue-900/50" : 
-                mcp.color === 'purple' ? "bg-purple-100 dark:bg-purple-900/50" : 
-                mcp.color === 'green' ? "bg-green-100 dark:bg-green-900/50" : 
-                mcp.color === 'red' ? "bg-red-100 dark:bg-red-900/50" : 
-                "bg-indigo-100 dark:bg-indigo-900/50"
-              }`}
-            >
-              <Check size={14} className={
-                mcp.color === 'blue' ? "text-blue-600 dark:text-blue-400" : 
-                mcp.color === 'purple' ? "text-purple-600 dark:text-purple-400" : 
-                mcp.color === 'green' ? "text-green-600 dark:text-green-400" : 
-                mcp.color === 'red' ? "text-red-600 dark:text-red-400" : 
-                "text-indigo-600 dark:text-indigo-400"
-              } />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    ))}
-  </div>
-  <AnimatePresence>
-    {selectedMCPs.length === 0 && (
-      <motion.div 
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: "auto" }}
-        exit={{ opacity: 0, height: 0 }}
-        transition={{ duration: 0.2 }}
-        className="mt-2 text-sm text-amber-500 dark:text-amber-400 flex items-center gap-1.5"
-      >
-        <motion.div
-          animate={{ rotate: [0, 10, 0] }}
-          transition={{ duration: 0.5, repeat: 1 }}
-        >
-          <AlertCircle size={14} />
-        </motion.div>
-        <span>Please select at least one MCP</span>
-      </motion.div>
-    )}
-  </AnimatePresence>
-</motion.div>
+              {/* Select MCPs */}
+              <motion.div variants={itemVariants}>
+                <label className="flex items-center gap-2 text-sm font-medium mb-4 text-gray-700 dark:text-gray-300">
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      repeatDelay: 5,
+                    }}
+                  >
+                    <Layers size={16} />
+                  </motion.div>
+                  Select MCPs
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {mcpOptions.map((mcp) => (
+                    <motion.div
+                      key={mcp.id}
+                      initial={{ opacity: 0.9 }}
+                      whileHover={{
+                        scale: 1.03,
+                        y: -2,
+                        boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
+                        backgroundColor: selectedMCPs.includes(mcp.id)
+                          ? `rgba(${
+                              mcp.color === "blue"
+                                ? "239, 246, 255"
+                                : mcp.color === "purple"
+                                ? "243, 232, 255"
+                                : mcp.color === "green"
+                                ? "236, 253, 245"
+                                : mcp.color === "red"
+                                ? "254, 242, 242"
+                                : "238, 242, 255"
+                            }, 0.3)`
+                          : "rgba(249, 250, 251, 0.8)",
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => toggleMCP(mcp.id)}
+                      onMouseEnter={() => setHoveringMCP(mcp.id)}
+                      onMouseLeave={() => setHoveringMCP(null)}
+                      className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-300 ${
+                        selectedMCPs.includes(mcp.id)
+                          ? "border-gray-400 dark:border-blue-700 bg-gray-50 dark:bg-gray-800/80"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <motion.div
+                          className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 p-1"
+                          animate={{
+                            rotate:
+                              selectedMCPs.includes(mcp.id) ||
+                              hoveringMCP === mcp.id
+                                ? [0, 10, 0]
+                                : 0,
+                            scale: selectedMCPs.includes(mcp.id)
+                              ? [1, 1.1, 1]
+                              : 1,
+                            boxShadow: selectedMCPs.includes(mcp.id)
+                              ? [
+                                  "0 0 0 0 rgba(59, 130, 246, 0)",
+                                  "0 0 0 4px rgba(59, 130, 246, 0.1)",
+                                  "0 0 0 0 rgba(59, 130, 246, 0)",
+                                ]
+                              : "none",
+                          }}
+                          transition={{
+                            duration: 0.5,
+                            ease: "easeInOut",
+                          }}
+                        >
+                          <Image
+                            src={mcp.icon}
+                            alt={mcp.name}
+                            width={32}
+                            height={32}
+                          />
+                        </motion.div>
+                        <div>
+                          <motion.div
+                            className={`font-medium text-base ${
+                              mcp.color === "blue"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : mcp.color === "purple"
+                                ? "text-purple-600 dark:text-purple-400"
+                                : mcp.color === "green"
+                                ? "text-green-600 dark:text-green-400"
+                                : mcp.color === "red"
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-indigo-600 dark:text-indigo-400"
+                            }`}
+                            animate={{
+                              scale: selectedMCPs.includes(mcp.id)
+                                ? [1, 1.05, 1]
+                                : 1,
+                              opacity: selectedMCPs.includes(mcp.id)
+                                ? [0.9, 1, 0.9]
+                                : 0.9,
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: selectedMCPs.includes(mcp.id)
+                                ? Infinity
+                                : 0,
+                              repeatType: "reverse",
+                            }}
+                          >
+                            {mcp.name}
+                          </motion.div>
+                          <div className="text-sm text-gray-500 dark:text-gray-300">
+                            {mcp.description}
+                          </div>
+                        </div>
+                      </div>
 
+                      {/* Selection indicator */}
+                      <AnimatePresence>
+                        {selectedMCPs.includes(mcp.id) && (
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, type: "spring" }}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              mcp.color === "blue"
+                                ? "bg-blue-100 dark:bg-blue-900/50"
+                                : mcp.color === "purple"
+                                ? "bg-purple-100 dark:bg-purple-900/50"
+                                : mcp.color === "green"
+                                ? "bg-green-100 dark:bg-green-900/50"
+                                : mcp.color === "red"
+                                ? "bg-red-100 dark:bg-red-900/50"
+                                : "bg-indigo-100 dark:bg-indigo-900/50"
+                            }`}
+                          >
+                            <Check
+                              size={14}
+                              className={
+                                mcp.color === "blue"
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : mcp.color === "purple"
+                                  ? "text-purple-600 dark:text-purple-400"
+                                  : mcp.color === "green"
+                                  ? "text-green-600 dark:text-green-400"
+                                  : mcp.color === "red"
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-indigo-600 dark:text-indigo-400"
+                              }
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </div>
+                <AnimatePresence>
+                  {selectedMCPs.length === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="mt-2 text-sm text-amber-500 dark:text-amber-400 flex items-center gap-1.5"
+                    >
+                      <motion.div
+                        animate={{ rotate: [0, 10, 0] }}
+                        transition={{ duration: 0.5, repeat: 1 }}
+                      >
+                        <AlertCircle size={14} />
+                      </motion.div>
+                      <span>Please select at least one MCP</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
 
               {/* Button row with back and next buttons side by side with space between */}
               <motion.div
