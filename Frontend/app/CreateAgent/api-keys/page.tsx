@@ -8,9 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import {
   ArrowLeft,
-  ArrowRight,
   Key,
-  Server,
   Shield,
   Layers,
   Check,
@@ -25,8 +23,33 @@ import {
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
 
+interface AgentData {
+  name: string;
+  invocationType: string;
+  mcps: {
+    id: number;
+    name: string;
+    description: string;
+    color: string;
+    apiKeys: {
+      [keyName: string]: string;
+    };
+  }[];
+  createdAt: string;
+}
+interface KeyInfo {
+  name: string;
+  label: string;
+}
+interface McpOption {
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
+  color: string;
+}
 // Import the same MCP options to get their details
-const mcpOptions = [
+const mcpOptions: McpOption[] = [
   {
     id: 1,
     name: "1inch",
@@ -73,8 +96,11 @@ const mcpOptions = [
 ];
 
 // Define the required API keys for each MCP
-const mcpRequiredKeys = {
-  1: [{ name: "1INCH_API_KEY", label: "API Key" }, { name: "1INCH_SECRET_KEY", label: "Secret Key" }],
+const mcpRequiredKeys: { [key: number]: KeyInfo[] } = {
+  1: [
+    { name: "1INCH_API_KEY", label: "API Key" },
+    { name: "1INCH_SECRET_KEY", label: "Secret Key" },
+  ],
   2: [{ name: "CLAUDE_CODE_MCP_API_KEY", label: "API Key" }],
   3: [{ name: "GOOGLE_MAPS_API_KEY", label: "API Key" }],
   4: [], // No keys required for desktop-commander
@@ -86,9 +112,8 @@ const mcpRequiredKeys = {
   ],
   6: [{ name: "HYPERBROWSER_API_KEY", label: "API Key" }],
 };
-
 // Function to upload data to Pinata
-const uploadToPinata = async (data) => {
+const uploadToPinata = async (data: AgentData) => {
   try {
     const formData = new FormData();
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
@@ -244,137 +269,137 @@ export default function ApiKeys() {
   };
 
   // Handle form submission
- // Update the handleSubmit function to include the API call
-const handleSubmit = async () => {
-  // Reset any previous errors
-  setUploadError(null);
+  // Update the handleSubmit function to include the API call
+  const handleSubmit = async () => {
+    // Reset any previous errors
+    setUploadError(null);
 
-  // Validate that all required API keys are provided
-  const newValidationErrors: Record<number, Record<string, boolean>> = {};
-  let hasError = false;
+    // Validate that all required API keys are provided
+    const newValidationErrors: Record<number, Record<string, boolean>> = {};
+    let hasError = false;
 
-  selectedMCPs.forEach((mcp) => {
-    const requiredKeys = mcpRequiredKeys[mcp.id] || [];
+    selectedMCPs.forEach((mcp: McpOption) => {
+      const requiredKeys = mcpRequiredKeys[mcp.id] || [];
 
-    // Skip validation for MCPs that don't require keys (like desktop-commander)
-    if (requiredKeys.length === 0) return;
+      // Skip validation for MCPs that don't require keys (like desktop-commander)
+      if (requiredKeys.length === 0) return;
 
-    newValidationErrors[mcp.id] = {};
+      newValidationErrors[mcp.id] = {};
 
-    requiredKeys.forEach((key) => {
-      if (!apiKeys[mcp.id]?.[key.name]?.trim()) {
-        newValidationErrors[mcp.id][key.name] = true;
-        hasError = true;
-      }
-    });
-  });
-
-  if (hasError) {
-    setValidationErrors(newValidationErrors);
-
-    // Shake the form to indicate error
-    const form = document.getElementById("api-keys-form");
-    if (form) {
-      form.classList.add("shake-animation");
-      setTimeout(() => {
-        form.classList.remove("shake-animation");
-      }, 500);
-    }
-
-    return;
-  }
-
-  setIsSubmitting(true);
-
-  // Simulate progress
-  const progressInterval = setInterval(() => {
-    setProgress((prev) => {
-      if (prev >= 95) {
-        return 95; // Hold at 95% until IPFS upload completes
-      }
-      return prev + 5;
-    });
-  }, 50);
-
-  try {
-    // Prepare data for IPFS
-    const agentData = {
-      name: agentName,
-      invocationType: invocationType,
-      mcps: selectedMCPs.map((mcp) => {
-        // Get the API keys for this MCP
-        const keys = apiKeys[mcp.id] || {};
-
-        return {
-          id: mcp.id,
-          name: mcp.name,
-          description: mcp.description,
-          color: mcp.color,
-          apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
-        };
-      }),
-      createdAt: new Date().toISOString(),
-    };
-
-    // Upload to Pinata
-    const hash = await uploadToPinata(agentData);
-    setIpfsHash(hash);
-    console.log("Agent data uploaded to IPFS with hash:", hash);
-
-    // Store the IPFS hash in localStorage for later use
-    localStorage.setItem("agentIpfsHash", hash);
-
-    // Clear the progress interval since we're done with the upload
-    clearInterval(progressInterval);
-    setProgress(100);
-
-    // Send the IPFS hash to the API
-    try {
-      const apiResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_MCP_API_ENDPOINT}/update_mcp_config`,
-        { ipfs_hash: hash },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+      requiredKeys.forEach((key) => {
+        if (!apiKeys[mcp.id]?.[key.name]?.trim()) {
+          newValidationErrors[mcp.id][key.name] = true;
+          hasError = true;
         }
-      );
-      console.log("API response:", apiResponse.data);
-    } catch (apiError) {
-      console.error("Error sending IPFS hash to API:", apiError);
-      setUploadError(
-        "Successfully uploaded to IPFS, but failed to update MCP config. Please try again."
-      );
-      setIsSubmitting(false);
+      });
+    });
+
+    if (hasError) {
+      setValidationErrors(newValidationErrors);
+
+      // Shake the form to indicate error
+      const form = document.getElementById("api-keys-form");
+      if (form) {
+        form.classList.add("shake-animation");
+        setTimeout(() => {
+          form.classList.remove("shake-animation");
+        }, 500);
+      }
+
       return;
     }
 
-    // Wait a moment to show the 100% progress
-    setTimeout(() => {
-      // Clear the temporary storage since we're done with the creation process
-      localStorage.removeItem("agentCreationData");
+    setIsSubmitting(true);
 
-      setIsSubmitting(false);
-      // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
-      router.push(
-        `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 95) {
+          return 95; // Hold at 95% until IPFS upload completes
+        }
+        return prev + 5;
+      });
+    }, 50);
+
+    try {
+      // Prepare data for IPFS
+      const agentData = {
+        name: agentName,
+        invocationType: invocationType,
+        mcps: selectedMCPs.map((mcp: McpOption) => {
+          // Get the API keys for this MCP
+          const keys = apiKeys[mcp.id] || {};
+
+          return {
+            id: mcp.id,
+            name: mcp.name,
+            description: mcp.description,
+            color: mcp.color,
+            apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
+          };
+        }),
+        createdAt: new Date().toISOString(),
+      };
+
+      // Upload to Pinata
+      const hash = await uploadToPinata(agentData);
+      setIpfsHash(hash);
+      console.log("Agent data uploaded to IPFS with hash:", hash);
+
+      // Store the IPFS hash in localStorage for later use
+      localStorage.setItem("agentIpfsHash", hash);
+
+      // Clear the progress interval since we're done with the upload
+      clearInterval(progressInterval);
+      setProgress(100);
+
+      // Send the IPFS hash to the API
+      try {
+        const apiResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_MCP_API_ENDPOINT}/update_mcp_config`,
+          { ipfs_hash: hash },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        console.log("API response:", apiResponse.data);
+      } catch (apiError) {
+        console.error("Error sending IPFS hash to API:", apiError);
+        setUploadError(
+          "Successfully uploaded to IPFS, but failed to update MCP config. Please try again."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Wait a moment to show the 100% progress
+      setTimeout(() => {
+        // Clear the temporary storage since we're done with the creation process
+        localStorage.removeItem("agentCreationData");
+
+        setIsSubmitting(false);
+        // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
+        router.push(
+          `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
+        );
+      }, 500);
+    } catch (error) {
+      console.error("Error uploading to IPFS:", error);
+
+      // Clear the progress interval
+      clearInterval(progressInterval);
+
+      // Show an error message
+      setUploadError(
+        "Failed to upload agent data to IPFS. Please check your network connection and try again."
       );
-    }, 500);
-  } catch (error) {
-    console.error("Error uploading to IPFS:", error);
 
-    // Clear the progress interval
-    clearInterval(progressInterval);
-
-    // Show an error message
-    setUploadError(
-      "Failed to upload agent data to IPFS. Please check your network connection and try again."
-    );
-
-    setProgress(0);
-    setIsSubmitting(false);
-  }
-};
+      setProgress(0);
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -512,7 +537,7 @@ const handleSubmit = async () => {
                 )}
               </AnimatePresence>
 
-              {selectedMCPs.map((mcp, index) => (
+              {selectedMCPs.map((mcp: McpOption) => (
                 <motion.div
                   key={mcp.id}
                   variants={itemVariants}
@@ -539,18 +564,18 @@ const handleSubmit = async () => {
                             ? "red"
                             : "indigo"
                         }-200 
-                                        dark:border-${
-                                          mcp.color === "blue"
-                                            ? "blue"
-                                            : mcp.color === "purple"
-                                            ? "purple"
-                                            : mcp.color === "green"
-                                            ? "green"
-                                            : mcp.color === "red"
-                                            ? "red"
-                                            : "indigo"
-                                        }-700 
-                                        bg-white dark:bg-gray-800`
+                          dark:border-${
+                            mcp.color === "blue"
+                              ? "blue"
+                              : mcp.color === "purple"
+                              ? "purple"
+                              : mcp.color === "green"
+                              ? "green"
+                              : mcp.color === "red"
+                              ? "red"
+                              : "indigo"
+                          }-700 
+                          bg-white dark:bg-gray-800`
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -641,43 +666,42 @@ const handleSubmit = async () => {
                       </div>
                     ) : (
                       // For all other MCPs, show the required inputs
-                      (mcpRequiredKeys[mcp.id] || []).map(
-                        (keyInfo, keyIndex) => (
-                          <div key={keyInfo.name} className="space-y-1">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-                              <Key size={14} />
-                              {keyInfo.label}
-                            </label>
-                            <div className="relative">
-                              <motion.input
-                                type={
-                                  visibleKeys[mcp.id]?.[keyInfo.name]
-                                    ? "text"
-                                    : "password"
-                                }
-                                value={apiKeys[mcp.id]?.[keyInfo.name] || ""}
-                                onChange={(e) =>
-                                  handleApiKeyChange(
-                                    mcp.id,
-                                    keyInfo.name,
-                                    e.target.value
-                                  )
-                                }
-                                placeholder={`Enter ${keyInfo.label}`}
-                                className={`w-full px-4 py-3 pr-20 rounded-lg border transition-all duration-200 ${
-                                  validationErrors[mcp.id]?.[keyInfo.name]
-                                    ? "border-red-300 dark:border-red-700 focus:ring-red-400 dark:focus:ring-red-600"
-                                    : `border-${
-                                        mcp.color === "blue"
-                                          ? "blue"
-                                          : mcp.color === "purple"
-                                          ? "purple"
-                                          : mcp.color === "green"
-                                          ? "green"
-                                          : mcp.color === "red"
-                                          ? "red"
-                                          : "indigo"
-                                      }-300 
+                      (mcpRequiredKeys[mcp.id] || []).map((keyInfo) => (
+                        <div key={keyInfo.name} className="space-y-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                            <Key size={14} />
+                            {keyInfo.label}
+                          </label>
+                          <div className="relative">
+                            <motion.input
+                              type={
+                                visibleKeys[mcp.id]?.[keyInfo.name]
+                                  ? "text"
+                                  : "password"
+                              }
+                              value={apiKeys[mcp.id]?.[keyInfo.name] || ""}
+                              onChange={(e) =>
+                                handleApiKeyChange(
+                                  mcp.id,
+                                  keyInfo.name,
+                                  e.target.value
+                                )
+                              }
+                              placeholder={`Enter ${keyInfo.label}`}
+                              className={`w-full px-4 py-3 pr-20 rounded-lg border transition-all duration-200 ${
+                                validationErrors[mcp.id]?.[keyInfo.name]
+                                  ? "border-red-300 dark:border-red-700 focus:ring-red-400 dark:focus:ring-red-600"
+                                  : `border-${
+                                      mcp.color === "blue"
+                                        ? "blue"
+                                        : mcp.color === "purple"
+                                        ? "purple"
+                                        : mcp.color === "green"
+                                        ? "green"
+                                        : mcp.color === "red"
+                                        ? "red"
+                                        : "indigo"
+                                    }-300 
                                                     dark:border-${
                                                       mcp.color === "blue"
                                                         ? "blue"
@@ -711,71 +735,70 @@ const handleSubmit = async () => {
                                                         ? "red"
                                                         : "indigo"
                                                     }-600`
-                                } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
-                                whileFocus={{ scale: 1.01 }}
-                              />
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
+                              whileFocus={{ scale: 1.01 }}
+                            />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              <motion.button
+                                type="button"
+                                onClick={() =>
+                                  toggleKeyVisibility(mcp.id, keyInfo.name)
+                                }
+                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                              >
+                                {visibleKeys[mcp.id]?.[keyInfo.name] ? (
+                                  <EyeOff size={16} />
+                                ) : (
+                                  <Eye size={16} />
+                                )}
+                              </motion.button>
+
+                              {apiKeys[mcp.id]?.[keyInfo.name] && (
                                 <motion.button
                                   type="button"
                                   onClick={() =>
-                                    toggleKeyVisibility(mcp.id, keyInfo.name)
+                                    copyToClipboard(
+                                      mcp.id,
+                                      keyInfo.name,
+                                      apiKeys[mcp.id][keyInfo.name]
+                                    )
                                   }
                                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                   whileHover={{ scale: 1.1 }}
                                   whileTap={{ scale: 0.9 }}
                                 >
-                                  {visibleKeys[mcp.id]?.[keyInfo.name] ? (
-                                    <EyeOff size={16} />
+                                  {copiedKey?.mcpId === mcp.id &&
+                                  copiedKey?.keyName === keyInfo.name ? (
+                                    <Check
+                                      size={16}
+                                      className="text-green-500"
+                                    />
                                   ) : (
-                                    <Eye size={16} />
+                                    <Copy size={16} />
                                   )}
                                 </motion.button>
-
-                                {apiKeys[mcp.id]?.[keyInfo.name] && (
-                                  <motion.button
-                                    type="button"
-                                    onClick={() =>
-                                      copyToClipboard(
-                                        mcp.id,
-                                        keyInfo.name,
-                                        apiKeys[mcp.id][keyInfo.name]
-                                      )
-                                    }
-                                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                  >
-                                    {copiedKey?.mcpId === mcp.id &&
-                                    copiedKey?.keyName === keyInfo.name ? (
-                                      <Check
-                                        size={16}
-                                        className="text-green-500"
-                                      />
-                                    ) : (
-                                      <Copy size={16} />
-                                    )}
-                                  </motion.button>
-                                )}
-                              </div>
-                            </div>
-
-                            <AnimatePresence>
-                              {validationErrors[mcp.id]?.[keyInfo.name] && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 mt-1"
-                                >
-                                  <AlertCircle size={14} />
-                                  <span>{keyInfo.label} is required</span>
-                                </motion.div>
                               )}
-                            </AnimatePresence>
+                            </div>
                           </div>
-                        )
-                      )
+
+                          <AnimatePresence>
+                            {validationErrors[mcp.id]?.[keyInfo.name] && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center gap-1 text-sm text-red-500 dark:text-red-400 mt-1"
+                              >
+                                <AlertCircle size={14} />
+                                <span>{keyInfo.label} is required</span>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))
                     )}
                   </div>
                 </motion.div>

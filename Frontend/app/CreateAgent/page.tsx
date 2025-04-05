@@ -17,7 +17,6 @@ import {
   Layers,
   ArrowLeft,
   AlertCircle,
-  ChevronDown,
 } from "lucide-react";
 import NavBar from "../components/NavBar";
 

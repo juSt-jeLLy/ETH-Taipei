@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ethers } from "ethers";
 import axios from "axios";
@@ -18,7 +17,6 @@ import {
   Clock,
   Zap,
   AlertTriangle,
-  ChevronRight,
   Activity,
   Settings,
   ExternalLink,
@@ -121,16 +119,28 @@ const itemVariants = {
     transition: { type: "spring", stiffness: 100 },
   },
 };
+interface Agent {
+  id: number;
+  name: string;
+  description: string;
+  type: string;
+  networks: string[];
+  lastActive: string;
+  status: string;
+  color: string;
+  ipfsHash: string;
+  owner: string;
+}
 
 export default function MyAgents() {
-  const router = useRouter();
+  
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [agents, setAgents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hoveringAgent, setHoveringAgent] = useState<number | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
-  const cache: Record<string, any[]> = {};
+  const cache: Record<string, Agent[]> = {};
 
   const fetchIpfsData = async (ipfsHash: string): Promise<IpfsData> => {
     try {

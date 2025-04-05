@@ -10,10 +10,8 @@ import {
   User,
   Bot,
   Shield,
-  Layers,
   ArrowLeft,
   Loader,
-  ChevronDown,
   Settings,
   Info,
   AlertCircle,
@@ -465,7 +463,7 @@ export default function FindAgent() {
                                         className="text-center max-w-md mx-auto pt-4 border-t border-gray-100 dark:border-gray-800"
                                       >
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                                          Don't have an agent yet?
+                                          Dont have an agent yet?
                                         </p>
                                         <Link href="/CreateAgent">
                                           <motion.button

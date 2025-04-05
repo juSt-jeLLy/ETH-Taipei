@@ -1,4 +1,3 @@
-
 // context/index.tsx
 'use client'
 
@@ -25,10 +24,10 @@ const metadata = {
 }
 
 // Create the modal
-const modal = createAppKit({
+export const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [mainnet, arbitrum, avalanche, base, optimism, polygon,sepolia],
+  networks: [mainnet, arbitrum, avalanche, base, optimism, polygon, sepolia],
   defaultNetwork: sepolia,
   metadata: metadata,
   features: {
@@ -47,4 +46,3 @@ function ContextProvider({ children, cookies }: { children: ReactNode; cookies: 
 }
 
 export default ContextProvider
-    
