@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { useWalletClient, useAccount } from "wagmi";
 import {
   ArrowLeft,
   Key,
@@ -22,6 +23,8 @@ import {
   Cloud,
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
+const { createPublicClient, createWalletClient, http } = await import("viem");
+const { parseAbi } = await import("viem");
 
 interface AgentData {
   name: string;
@@ -48,7 +51,7 @@ interface McpOption {
   description: string;
   color: string;
 }
-// Import the same MCP options to get their details
+
 const mcpOptions: McpOption[] = [
   {
     id: 1,
@@ -57,7 +60,6 @@ const mcpOptions: McpOption[] = [
     description: "DeFi integration",
     color: "green",
   },
-
   {
     id: 2,
     name: "claude-code-mcp",
@@ -95,7 +97,6 @@ const mcpOptions: McpOption[] = [
   },
 ];
 
-// Define the required API keys for each MCP
 const mcpRequiredKeys: { [key: number]: KeyInfo[] } = {
   1: [
     { name: "1INCH_API_KEY", label: "API Key" },
@@ -112,7 +113,7 @@ const mcpRequiredKeys: { [key: number]: KeyInfo[] } = {
   ],
   6: [{ name: "HYPERBROWSER_API_KEY", label: "API Key" }],
 };
-// Function to upload data to Pinata
+
 const uploadToPinata = async (data: AgentData) => {
   try {
     const formData = new FormData();
@@ -138,7 +139,6 @@ const uploadToPinata = async (data: AgentData) => {
   }
 };
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -165,7 +165,7 @@ export default function ApiKeys() {
   const agentName = searchParams.get("name") || "";
   const invocationType = searchParams.get("type") || "ping";
   const selectedMCPIds = searchParams.get("mcps")?.split(",").map(Number) || [];
-
+  const account = useAccount();
   const [apiKeys, setApiKeys] = useState<
     Record<number, Record<string, string>>
   >({});
@@ -185,34 +185,31 @@ export default function ApiKeys() {
   const [ipfsHash, setIpfsHash] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Filter to only show selected MCPs
   const selectedMCPs = mcpOptions.filter((mcp) =>
     selectedMCPIds.includes(mcp.id)
   );
 
-  // Retrieve stored agent data on component mount
+  const { address } = useAccount(); // get connected address if needed
+  const { data: walletClient } = useWalletClient(); // get the wallet client
+
+
   useEffect(() => {
-    // Retrieve the stored agent data
     const storedAgentData = localStorage.getItem("agentCreationData");
 
     if (storedAgentData) {
       try {
         const parsedData = JSON.parse(storedAgentData);
 
-        // You can use this data as a fallback if URL parameters are missing
         if (!agentName && parsedData.agentName) {
-          // If URL param is missing but we have stored data, use it
           router.replace(
             `/CreateAgent/api-keys?name=${encodeURIComponent(
               parsedData.agentName
             )}&type=${parsedData.invocationType}&mcps=${parsedData.selectedMCPs
-              .map((mcp) => mcp.id)
+              .map((mcp: McpOption) => mcp.id)
               .join(",")}`
           );
         }
 
-        // You can also use the detailed MCP data from localStorage
-        // instead of just the IDs from the URL
         console.log("Retrieved complete agent data:", parsedData);
       } catch (error) {
         console.error("Error parsing stored agent data:", error);
@@ -220,68 +217,15 @@ export default function ApiKeys() {
     }
   }, [agentName, router]);
 
-  // Handle API key change
-  const handleApiKeyChange = (
-    mcpId: number,
-    keyName: string,
-    value: string
-  ) => {
-    setApiKeys((prev) => ({
-      ...prev,
-      [mcpId]: {
-        ...(prev[mcpId] || {}),
-        [keyName]: value,
-      },
-    }));
-
-    // Clear validation error when user types
-    if (validationErrors[mcpId]?.[keyName]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [mcpId]: {
-          ...(prev[mcpId] || {}),
-          [keyName]: false,
-        },
-      }));
-    }
-  };
-
-  // Toggle key visibility
-  const toggleKeyVisibility = (mcpId: number, keyName: string) => {
-    setVisibleKeys((prev) => ({
-      ...prev,
-      [mcpId]: {
-        ...(prev[mcpId] || {}),
-        [keyName]: !(prev[mcpId]?.[keyName] || false),
-      },
-    }));
-  };
-
-  // Copy key to clipboard
-  const copyToClipboard = (mcpId: number, keyName: string, value: string) => {
-    navigator.clipboard.writeText(value);
-    setCopiedKey({ mcpId, keyName });
-
-    // Reset copied status after 2 seconds
-    setTimeout(() => {
-      setCopiedKey(null);
-    }, 2000);
-  };
-
-  // Handle form submission
-  // Update the handleSubmit function to include the API call
   const handleSubmit = async () => {
-    // Reset any previous errors
     setUploadError(null);
 
-    // Validate that all required API keys are provided
     const newValidationErrors: Record<number, Record<string, boolean>> = {};
     let hasError = false;
 
     selectedMCPs.forEach((mcp: McpOption) => {
       const requiredKeys = mcpRequiredKeys[mcp.id] || [];
 
-      // Skip validation for MCPs that don't require keys (like desktop-commander)
       if (requiredKeys.length === 0) return;
 
       newValidationErrors[mcp.id] = {};
@@ -296,8 +240,6 @@ export default function ApiKeys() {
 
     if (hasError) {
       setValidationErrors(newValidationErrors);
-
-      // Shake the form to indicate error
       const form = document.getElementById("api-keys-form");
       if (form) {
         form.classList.add("shake-animation");
@@ -305,55 +247,92 @@ export default function ApiKeys() {
           form.classList.remove("shake-animation");
         }, 500);
       }
-
       return;
     }
 
     setIsSubmitting(true);
-
-    // Simulate progress
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
-          return 95; // Hold at 95% until IPFS upload completes
-        }
+        if (prev >= 95) return 95;
         return prev + 5;
       });
     }, 50);
 
     try {
-      // Prepare data for IPFS
       const agentData = {
         name: agentName,
         invocationType: invocationType,
         mcps: selectedMCPs.map((mcp: McpOption) => {
-          // Get the API keys for this MCP
           const keys = apiKeys[mcp.id] || {};
-
           return {
             id: mcp.id,
             name: mcp.name,
             description: mcp.description,
             color: mcp.color,
-            apiKeys: mcp.id === 4 ? {} : keys, // No keys for desktop-commander
+            apiKeys: mcp.id === 4 ? {} : keys,
           };
         }),
         createdAt: new Date().toISOString(),
       };
 
-      // Upload to Pinata
       const hash = await uploadToPinata(agentData);
       setIpfsHash(hash);
       console.log("Agent data uploaded to IPFS with hash:", hash);
-
-      // Store the IPFS hash in localStorage for later use
       localStorage.setItem("agentIpfsHash", hash);
 
-      // Clear the progress interval since we're done with the upload
       clearInterval(progressInterval);
       setProgress(100);
 
-      // Send the IPFS hash to the API
+      try {
+        // Prepare contract call parameters
+        const abi = parseAbi([
+          "function createAgent(string ipfsHash) public returns (uint256)",
+        ]);
+        const contractAddress = "0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a";
+  
+        if (!walletClient) {
+          throw new Error("No wallet client available");
+        }
+  
+        // Call the createAgent function
+        const txHash = await walletClient.writeContract({
+          address: contractAddress,
+          abi,
+          functionName: "createAgent",
+          args: [hash],
+        });
+        console.log("Transaction hash:", txHash);
+  
+        // Wait for transaction confirmation
+        const publicClient = createPublicClient({
+          chain: {
+            id: 11155111,
+            name: "Sepolia",
+            rpcUrls: { default: { http: ["https://rpc.sepolia.org"] } },
+            nativeCurrency: {
+              name: "Sepolia Ether",
+              symbol: "ETH",
+              decimals: 18,
+            },
+          },
+          transport: http(),
+        });
+  
+        // Wait for the transaction receipt using the public client
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+        });
+        
+        console.log("Transaction receipt:", receipt);
+      } catch (contractError) {
+        console.error("Error calling smart contract:", contractError);
+        setUploadError(
+          "Successfully uploaded to IPFS, but failed to create agent on blockchain. Please try again."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       try {
         const apiResponse = await axios.post(
           `${process.env.NEXT_PUBLIC_MCP_API_ENDPOINT}/update_mcp_config`,
@@ -374,31 +353,64 @@ export default function ApiKeys() {
         return;
       }
 
-      // Wait a moment to show the 100% progress
       setTimeout(() => {
-        // Clear the temporary storage since we're done with the creation process
         localStorage.removeItem("agentCreationData");
-
         setIsSubmitting(false);
-        // Navigate to FindAgent page with the agent name and IPFS hash as query parameters
         router.push(
           `/FindAgent?name=${encodeURIComponent(agentName)}&ipfsHash=${hash}`
         );
       }, 500);
     } catch (error) {
       console.error("Error uploading to IPFS:", error);
-
-      // Clear the progress interval
       clearInterval(progressInterval);
-
-      // Show an error message
       setUploadError(
         "Failed to upload agent data to IPFS. Please check your network connection and try again."
       );
-
       setProgress(0);
       setIsSubmitting(false);
     }
+  };
+
+  const handleApiKeyChange = (
+    mcpId: number,
+    keyName: string,
+    value: string
+  ) => {
+    setApiKeys((prev) => ({
+      ...prev,
+      [mcpId]: {
+        ...(prev[mcpId] || {}),
+        [keyName]: value,
+      },
+    }));
+
+    if (validationErrors[mcpId]?.[keyName]) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [mcpId]: {
+          ...(prev[mcpId] || {}),
+          [keyName]: false,
+        },
+      }));
+    }
+  };
+
+  const toggleKeyVisibility = (mcpId: number, keyName: string) => {
+    setVisibleKeys((prev) => ({
+      ...prev,
+      [mcpId]: {
+        ...(prev[mcpId] || {}),
+        [keyName]: !(prev[mcpId]?.[keyName] || false),
+      },
+    }));
+  };
+
+  const copyToClipboard = (mcpId: number, keyName: string, value: string) => {
+    navigator.clipboard.writeText(value);
+    setCopiedKey({ mcpId, keyName });
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 2000);
   };
 
   return (
@@ -420,7 +432,6 @@ export default function ApiKeys() {
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600" />
           <div className="absolute w-full h-full bg-[url('/grid-pattern.svg')] bg-center" />
         </motion.div>
-
         <div className="relative z-10">
           <NavBar />
         </div>
@@ -434,7 +445,6 @@ export default function ApiKeys() {
           transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-800 mb-16 relative overflow-hidden"
         >
-          {/* Background gradient effect */}
           <motion.div
             className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/5 opacity-50 dark:opacity-20 z-0"
             animate={{
@@ -447,7 +457,6 @@ export default function ApiKeys() {
               repeatType: "reverse",
             }}
           />
-
           <div className="relative z-10" id="api-keys-form">
             <motion.div
               className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800"
@@ -505,14 +514,11 @@ export default function ApiKeys() {
                     Secure API Keys Required
                   </p>
                   <p className="text-blue-600 dark:text-blue-400 text-sm">
-                    Please provide API keys for each of the selected MCPs to
-                    complete your agent setup. Your keys are encrypted and
-                    stored securely on IPFS.
+                    Please provide API keys for each of the selected MCPs to complete your agent setup. Your keys are encrypted and stored securely on IPFS.
                   </p>
                 </div>
               </motion.div>
 
-              {/* Display upload error if any */}
               <AnimatePresence>
                 {uploadError && (
                   <motion.div
@@ -563,19 +569,17 @@ export default function ApiKeys() {
                             : mcp.color === "red"
                             ? "red"
                             : "indigo"
-                        }-200 
-                          dark:border-${
-                            mcp.color === "blue"
-                              ? "blue"
-                              : mcp.color === "purple"
-                              ? "purple"
-                              : mcp.color === "green"
-                              ? "green"
-                              : mcp.color === "red"
-                              ? "red"
-                              : "indigo"
-                          }-700 
-                          bg-white dark:bg-gray-800`
+                        }-200 dark:border-${
+                          mcp.color === "blue"
+                            ? "blue"
+                            : mcp.color === "purple"
+                            ? "purple"
+                            : mcp.color === "green"
+                            ? "green"
+                            : mcp.color === "red"
+                            ? "red"
+                            : "indigo"
+                        }-700 bg-white dark:bg-gray-800`
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -590,18 +594,17 @@ export default function ApiKeys() {
                           : mcp.color === "red"
                           ? "red"
                           : "indigo"
-                      }-100 
-                                     dark:bg-${
-                                       mcp.color === "blue"
-                                         ? "blue"
-                                         : mcp.color === "purple"
-                                         ? "purple"
-                                         : mcp.color === "green"
-                                         ? "green"
-                                         : mcp.color === "red"
-                                         ? "red"
-                                         : "indigo"
-                                     }-900/30 p-1`}
+                      }-100 dark:bg-${
+                        mcp.color === "blue"
+                          ? "blue"
+                          : mcp.color === "purple"
+                          ? "purple"
+                          : mcp.color === "green"
+                          ? "green"
+                          : mcp.color === "red"
+                          ? "red"
+                          : "indigo"
+                      }-900/30 p-1`}
                       animate={
                         hoveringMCP === mcp.id
                           ? {
@@ -631,18 +634,17 @@ export default function ApiKeys() {
                             : mcp.color === "red"
                             ? "red"
                             : "indigo"
-                        }-600 
-                                       dark:text-${
-                                         mcp.color === "blue"
-                                           ? "blue"
-                                           : mcp.color === "purple"
-                                           ? "purple"
-                                           : mcp.color === "green"
-                                           ? "green"
-                                           : mcp.color === "red"
-                                           ? "red"
-                                           : "indigo"
-                                       }-400`}
+                        }-600 dark:text-${
+                          mcp.color === "blue"
+                            ? "blue"
+                            : mcp.color === "purple"
+                            ? "purple"
+                            : mcp.color === "green"
+                            ? "green"
+                            : mcp.color === "red"
+                            ? "red"
+                            : "indigo"
+                        }-400`}
                         animate={
                           hoveringMCP === mcp.id ? { scale: [1, 1.03, 1] } : {}
                         }
@@ -658,14 +660,12 @@ export default function ApiKeys() {
                   </div>
 
                   <div className="mt-2 space-y-3">
-                    {/* If this is desktop-commander, show a message that no API keys are needed */}
                     {mcp.id === 4 ? (
                       <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800 text-green-700 dark:text-green-300 flex items-center gap-2">
                         <Check size={16} />
                         <span>No API keys required for this MCP</span>
                       </div>
                     ) : (
-                      // For all other MCPs, show the required inputs
                       (mcpRequiredKeys[mcp.id] || []).map((keyInfo) => (
                         <div key={keyInfo.name} className="space-y-1">
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
@@ -701,40 +701,37 @@ export default function ApiKeys() {
                                         : mcp.color === "red"
                                         ? "red"
                                         : "indigo"
-                                    }-300 
-                                                    dark:border-${
-                                                      mcp.color === "blue"
-                                                        ? "blue"
-                                                        : mcp.color === "purple"
-                                                        ? "purple"
-                                                        : mcp.color === "green"
-                                                        ? "green"
-                                                        : mcp.color === "red"
-                                                        ? "red"
-                                                        : "indigo"
-                                                    }-700 
-                                                    focus:ring-${
-                                                      mcp.color === "blue"
-                                                        ? "blue"
-                                                        : mcp.color === "purple"
-                                                        ? "purple"
-                                                        : mcp.color === "green"
-                                                        ? "green"
-                                                        : mcp.color === "red"
-                                                        ? "red"
-                                                        : "indigo"
-                                                    }-400 
-                                                    dark:focus:ring-${
-                                                      mcp.color === "blue"
-                                                        ? "blue"
-                                                        : mcp.color === "purple"
-                                                        ? "purple"
-                                                        : mcp.color === "green"
-                                                        ? "green"
-                                                        : mcp.color === "red"
-                                                        ? "red"
-                                                        : "indigo"
-                                                    }-600`
+                                    }-300 dark:border-${
+                                      mcp.color === "blue"
+                                        ? "blue"
+                                        : mcp.color === "purple"
+                                        ? "purple"
+                                        : mcp.color === "green"
+                                        ? "green"
+                                        : mcp.color === "red"
+                                        ? "red"
+                                        : "indigo"
+                                    }-700 focus:ring-${
+                                      mcp.color === "blue"
+                                        ? "blue"
+                                        : mcp.color === "purple"
+                                        ? "purple"
+                                        : mcp.color === "green"
+                                        ? "green"
+                                        : mcp.color === "red"
+                                        ? "red"
+                                        : "indigo"
+                                    }-400 dark:focus:ring-${
+                                      mcp.color === "blue"
+                                        ? "blue"
+                                        : mcp.color === "purple"
+                                        ? "purple"
+                                        : mcp.color === "green"
+                                        ? "green"
+                                        : mcp.color === "red"
+                                        ? "red"
+                                        : "indigo"
+                                    }-600`
                               } bg-white dark:bg-gray-900 focus:outline-none focus:ring-1`}
                               whileFocus={{ scale: 1.01 }}
                             />
@@ -804,7 +801,6 @@ export default function ApiKeys() {
                 </motion.div>
               ))}
 
-              {/* Button row with back and submit buttons side by side with space between */}
               <motion.div
                 className="flex justify-between items-center gap-8 mt-6"
                 variants={itemVariants}
@@ -892,7 +888,6 @@ export default function ApiKeys() {
                 </motion.button>
               </motion.div>
 
-              {/* Show IPFS hash if available */}
               <AnimatePresence>
                 {ipfsHash && (
                   <motion.div
@@ -933,7 +928,6 @@ export default function ApiKeys() {
         </motion.div>
       </div>
 
-      {/* Footer */}
       <footer className="py-12 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div

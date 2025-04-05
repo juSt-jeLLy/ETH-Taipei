@@ -8,6 +8,9 @@ import { ethers } from "ethers";
 import axios from "axios";
 import NavBar from "../components/NavBar";
 import { BrowserProvider } from "ethers";
+import { createPublicClient, createWalletClient, http, parseAbi, getContract } from "viem";
+import { useWalletClient, useAccount } from "wagmi";
+
 import {
   Bot,
   Shield,
@@ -22,7 +25,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = "0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a";
 const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
 
 
@@ -103,6 +106,19 @@ interface IpfsData {
   networks: string[];
 }
 
+// Helper function for network colors
+const getNetworkColor = (network: string): string => {
+  const networkColors: Record<string, string> = {
+    'Ethereum': 'blue',
+    'Polygon': 'purple',
+    'Optimism': 'red',
+    'Arbitrum': 'indigo',
+    'Base': 'green',
+  };
+  
+  return networkColors[network] || 'blue';
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -133,14 +149,78 @@ interface Agent {
 }
 
 export default function MyAgents() {
-  
+  const account = useAccount();
+
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [agents, setAgents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hoveringAgent, setHoveringAgent] = useState<number | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
+  const { data: walletClient } = useWalletClient(); // get the wallet client
+
   const cache: Record<string, Agent[]> = {};
+  
+  // Function to handle chat with an agent
+  const handleChatWithAgent = async (ipfsHash: string) => {
+    try {
+      if (!window.ethereum) {
+        alert("Please install MetaMask to use this feature!");
+        return;
+      }
+      
+      // Get the wallet account
+      
+      // Create clients
+      const publicClient = createPublicClient({
+        chain: {
+          id: 11155111,
+          name: "Sepolia",
+          rpcUrls: { default: { http: ["https://rpc.sepolia.org"] } },
+          nativeCurrency: {
+            name: "Sepolia Ether",
+            symbol: "ETH",
+            decimals: 18,
+          },
+        },
+        transport: http(),
+      });
+      
+     
+      
+      // Define ABI for requestAccess function
+      const abi = parseAbi([
+        'function requestAccess(string ipfsHash) public payable',
+      ]);
+      if (!walletClient) {
+        throw new Error("No wallet client available");
+      }
+
+      // Call the requestAccess function with required payment
+      const txHash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS, // 0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a
+        abi,
+        functionName: "requestAccess",
+        args: [ipfsHash],
+        value: BigInt(1000000000000000), // 0.001 ETH in wei
+      });
+      
+      console.log("Transaction hash:", txHash);
+      
+      // Wait for transaction confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+      console.log("Transaction receipt:", receipt);
+      
+      // Show success message
+      alert("Access granted! You can now chat with this agent.");
+      
+    } catch (error) {
+      console.error("Error requesting access:", error);
+      alert("Failed to request access. Please try again.");
+    }
+  };
 
   const fetchIpfsData = async (ipfsHash: string): Promise<IpfsData> => {
     try {
@@ -768,7 +848,7 @@ export default function MyAgents() {
                           whileTap={{ scale: 0.98 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleChatWithAgent(agent.name);
+                            handleChatWithAgent(agent.ipfsHash);
                           }}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-1 shadow-sm ${
                             agent.color === "blue"
