@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion} from "framer-motion";
 import {
   ArrowRight,
   Bot,
@@ -14,13 +14,12 @@ import {
   Globe,
   Code,
   Github,
-  ChevronRight,
 } from "lucide-react";
 import NavBar from "./components/NavBar";
 
 export default function Home() {
   // State for animation triggers
-  const [isHovering, setIsHovering] = useState(null);
+  const [isHovering, setIsHovering] = useState<number | null>(null);
   const [animateNetwork, setAnimateNetwork] = useState(false);
 
   // Start network animation after component mounts
@@ -498,7 +497,8 @@ export default function Home() {
                 style={{
                   "--hover-bg": "rgba(249, 250, 251, 1)",
                   "--hover-border": "rgba(229, 231, 235, 1)"
-                }}
+                } as React.CSSProperties}
+                
                 onMouseEnter={() => setIsHovering(index)}
                 onMouseLeave={() => setIsHovering(null)}
               >

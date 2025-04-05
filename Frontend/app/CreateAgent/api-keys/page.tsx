@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { useWalletClient, useAccount } from "wagmi";
+import { useWalletClient } from "wagmi";
 import {
   ArrowLeft,
   Key,
@@ -23,7 +23,7 @@ import {
   Cloud,
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
-const { createPublicClient, createWalletClient, http } = await import("viem");
+const { createPublicClient, http } = await import("viem");
 const { parseAbi } = await import("viem");
 
 interface AgentData {
@@ -165,7 +165,7 @@ export default function ApiKeys() {
   const agentName = searchParams.get("name") || "";
   const invocationType = searchParams.get("type") || "ping";
   const selectedMCPIds = searchParams.get("mcps")?.split(",").map(Number) || [];
-  const account = useAccount();
+
   const [apiKeys, setApiKeys] = useState<
     Record<number, Record<string, string>>
   >({});
@@ -189,7 +189,7 @@ export default function ApiKeys() {
     selectedMCPIds.includes(mcp.id)
   );
 
-  const { address } = useAccount(); // get connected address if needed
+// get connected address if needed
   const { data: walletClient } = useWalletClient(); // get the wallet client
 
 

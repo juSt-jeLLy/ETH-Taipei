@@ -8,8 +8,8 @@ import { ethers } from "ethers";
 import axios from "axios";
 import NavBar from "../components/NavBar";
 import { BrowserProvider } from "ethers";
-import { createPublicClient, createWalletClient, http, parseAbi, getContract } from "viem";
-import { useWalletClient, useAccount } from "wagmi";
+import { createPublicClient, http, parseAbi } from "viem";
+import { useWalletClient } from "wagmi";
 
 import {
   Bot,
@@ -27,7 +27,6 @@ import {
 
 const CONTRACT_ADDRESS = "0x4b01fb681c18a6fe24f288ce315da7fc75a17a8a";
 const IPFS_GATEWAY = "https://ipfs.io/ipfs/";
-
 
 const AgentNFT = [
   {
@@ -109,14 +108,14 @@ interface IpfsData {
 // Helper function for network colors
 const getNetworkColor = (network: string): string => {
   const networkColors: Record<string, string> = {
-    'Ethereum': 'blue',
-    'Polygon': 'purple',
-    'Optimism': 'red',
-    'Arbitrum': 'indigo',
-    'Base': 'green',
+    Ethereum: "blue",
+    Polygon: "purple",
+    Optimism: "red",
+    Arbitrum: "indigo",
+    Base: "green",
   };
-  
-  return networkColors[network] || 'blue';
+
+  return networkColors[network] || "blue";
 };
 
 const containerVariants = {
@@ -149,18 +148,16 @@ interface Agent {
 }
 
 export default function MyAgents() {
-  const account = useAccount();
-
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hoveringAgent, setHoveringAgent] = useState<number | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
   const { data: walletClient } = useWalletClient(); // get the wallet client
 
   const cache: Record<string, Agent[]> = {};
-  
+
   // Function to handle chat with an agent
   const handleChatWithAgent = async (ipfsHash: string) => {
     try {
@@ -168,9 +165,9 @@ export default function MyAgents() {
         alert("Please install MetaMask to use this feature!");
         return;
       }
-      
+
       // Get the wallet account
-      
+
       // Create clients
       const publicClient = createPublicClient({
         chain: {
@@ -185,12 +182,10 @@ export default function MyAgents() {
         },
         transport: http(),
       });
-      
-     
-      
+
       // Define ABI for requestAccess function
       const abi = parseAbi([
-        'function requestAccess(string ipfsHash) public payable',
+        "function requestAccess(string ipfsHash) public payable",
       ]);
       if (!walletClient) {
         throw new Error("No wallet client available");
@@ -204,18 +199,17 @@ export default function MyAgents() {
         args: [ipfsHash],
         value: BigInt(1000000000000000), // 0.001 ETH in wei
       });
-      
+
       console.log("Transaction hash:", txHash);
-      
+
       // Wait for transaction confirmation
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
       });
       console.log("Transaction receipt:", receipt);
-      
+
       // Show success message
       alert("Access granted! You can now chat with this agent.");
-      
     } catch (error) {
       console.error("Error requesting access:", error);
       alert("Failed to request access. Please try again.");
@@ -402,7 +396,7 @@ export default function MyAgents() {
                   className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto"
                   variants={itemVariants}
                 >
-                  Please connect your wallet to view your agents. You'll need to
+                  Please connect your wallet to view your agents. You will need to
                   connect your wallet to access this feature.
                 </motion.p>
                 <Link href="/">
@@ -522,7 +516,7 @@ export default function MyAgents() {
                   className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto"
                   variants={itemVariants}
                 >
-                  You don't have any agents yet. Create your first agent to get
+                  You dont have any agents yet. Create your first agent to get
                   started.
                 </motion.p>
                 <Link href="/CreateAgent">
@@ -598,7 +592,7 @@ export default function MyAgents() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {agents.map((agent, index) => (
+                  {agents.map((agent: Agent) => (
                     <motion.div
                       key={agent.id}
                       variants={itemVariants}
@@ -726,37 +720,40 @@ export default function MyAgents() {
                       </p>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {agents.map((agent, index) => (
+                        {agents.map((agent) => (
                           <motion.div key={agent.id}>
                             {/* Other agent card content */}
 
                             {/* Add the networks section here */}
                             <div className="flex flex-wrap gap-2 mb-4">
                               {agent.networks &&
-                                agent.networks.map((network, idx) => (
-                                  <motion.span
-                                    key={idx}
-                                    className={`text-xs px-2 py-1 rounded-full ${
-                                      getNetworkColor(network) === "blue"
-                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                                        : getNetworkColor(network) === "purple"
-                                        ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                                        : getNetworkColor(network) === "green"
-                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                                        : getNetworkColor(network) === "red"
-                                        ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                                        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                                    }`}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                    }}
-                                  >
-                                    {network}
-                                  </motion.span>
-                                ))}
+                                agent.networks.map(
+                                  (network: string, idx: number) => (
+                                    <motion.span
+                                      key={idx}
+                                      className={`text-xs px-2 py-1 rounded-full ${
+                                        getNetworkColor(network) === "blue"
+                                          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                          : getNetworkColor(network) ===
+                                            "purple"
+                                          ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                                          : getNetworkColor(network) === "green"
+                                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                          : getNetworkColor(network) === "red"
+                                          ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                          : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                                      }`}
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 300,
+                                      }}
+                                    >
+                                      {network}
+                                    </motion.span>
+                                  )
+                                )}
                             </div>
 
                             {/* Continue with other agent card content */}
