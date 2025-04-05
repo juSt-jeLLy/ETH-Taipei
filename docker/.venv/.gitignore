@@ -1,0 +1,9 @@
+# Ignore lib/ directory
+lib/
+
+# Ignore bin/ directory
+bin/
+
+.env
+
+fasta
