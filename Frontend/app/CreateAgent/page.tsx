@@ -25,7 +25,7 @@ import NavBar from "../components/NavBar";
 const mcpOptions = [
   {
     id: 1,
-    name: "1inch-mcp",
+    name: "1inch",
     icon: "/download.png",
     description: "DeFi integration",
     color: "green",
@@ -54,7 +54,7 @@ const mcpOptions = [
   },
   {
     id: 5,
-    name: "twitter-mcp",
+    name: "twitter",
     icon: "/Artboard-1twitter.webp",
     description: "Twitter integration",
     color: "green",

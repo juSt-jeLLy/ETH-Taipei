@@ -194,7 +194,7 @@ export default function MyAgents() {
                 <Bot size={24} className="text-gray-700 dark:text-gray-300" />
               </motion.div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                My Agents
+                Agents
               </h2>
             </motion.div>
 

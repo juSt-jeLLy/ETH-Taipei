@@ -235,7 +235,7 @@ export default function NavBar() {
               { href: "/CreateAgent", label: "Create Agent" },
               {
                 href: walletConnected ? "/MyAgents" : "#",
-                label: "My Agents",
+                label: "Agents",
                 needsWallet: true,
                 onClick: handleMyAgentsClick,
               },
@@ -431,7 +431,7 @@ export default function NavBar() {
                 { href: "/CreateAgent", label: "Create Agent" },
                 {
                   href: walletConnected ? "/MyAgents" : "#",
-                  label: "My Agents",
+                  label: "Agents",
                   needsWallet: true,
                   onClick: (e) => {
                     setMobileMenuOpen(false);
