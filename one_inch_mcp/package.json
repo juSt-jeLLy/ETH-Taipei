@@ -1,0 +1,30 @@
+{
+  "name": "cross-chain-portfolio-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for 1inch cross-chain swaps and portfolio tracking",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@1inch/cross-chain-sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.7.1",
+    "web3": "^4.1.1",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5",
+    "@typescript-eslint/eslint-plugin": "^6.2.0",
+    "@typescript-eslint/parser": "^6.2.0",
+    "eslint": "^8.45.0",
+    "tsc-watch": "^6.0.4",
+    "typescript": "^5.1.6"
+  }
+}
