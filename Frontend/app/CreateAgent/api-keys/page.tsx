@@ -23,8 +23,7 @@ import {
   Cloud,
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
-const { createPublicClient, createWalletClient, http } = await import("viem");
-const { parseAbi } = await import("viem");
+import { createPublicClient, createWalletClient, http, parseAbi } from "viem";
 
 interface AgentData {
   name: string;
@@ -306,14 +305,26 @@ export default function ApiKeys() {
         // Wait for transaction confirmation
         const publicClient = createPublicClient({
           chain: {
-            id: 11155111,
-            name: "Sepolia",
-            rpcUrls: { default: { http: ["https://rpc.sepolia.org"] } },
-            nativeCurrency: {
-              name: "Sepolia Ether",
-              symbol: "ETH",
-              decimals: 18,
+            id: account.chainId === 80002 ? 80002 : 11155111,
+            name: account.chainId === 80002 ? "Polygon Amoy" : "Sepolia",
+            rpcUrls: { 
+              default: { 
+                http: account.chainId === 80002 
+                  ? ["https://80002.rpc.thirdweb.com/"] 
+                  : ["https://rpc.sepolia.org"] 
+              } 
             },
+            nativeCurrency: account.chainId === 80002 
+              ? {
+                  name: "MATIC",
+                  symbol: "MATIC",
+                  decimals: 18,
+                }
+              : {
+                  name: "Sepolia Ether",
+                  symbol: "ETH",
+                  decimals: 18,
+                },
           },
           transport: http(),
         });

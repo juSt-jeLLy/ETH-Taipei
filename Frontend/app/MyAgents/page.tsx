@@ -105,6 +105,15 @@ interface IpfsData {
   description: string;
   type: string;
   networks: string[];
+  invocationType?: string;
+  mcps?: Array<{
+    id: number;
+    name: string;
+    description: string;
+    color: string;
+    apiKeys?: Record<string, string>;
+  }>;
+  createdAt?: string;
 }
 
 // Helper function for network colors
@@ -147,6 +156,14 @@ interface Agent {
   color: string;
   ipfsHash: string;
   owner: string;
+  mcps?: Array<{
+    id: number;
+    name: string;
+    description: string;
+    color: string;
+    apiKeys?: Record<string, string>;
+  }>;
+  createdAt?: string;
 }
 
 export default function MyAgents() {
@@ -155,7 +172,7 @@ export default function MyAgents() {
 
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hoveringAgent, setHoveringAgent] = useState<number | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<number | null>(null);
@@ -273,13 +290,15 @@ export default function MyAgents() {
             id: index + 1,
             name: ipfsData.name,
             description: ipfsData.description,
-            type: ipfsData.type,
-            networks: ipfsData.networks,
+            type: ipfsData.type || (ipfsData.invocationType || 'polling'),
+            networks: ipfsData.networks || ['Ethereum'],
             lastActive: "Recently",
             status: agent.exists ? "active" : "inactive",
             color: ["blue", "purple", "green"][Math.floor(Math.random() * 3)],
             ipfsHash: agent.ipfsHash,
             owner: agent.owner,
+            mcps: ipfsData.mcps || [],
+            createdAt: ipfsData.createdAt || new Date().toISOString()
           };
         })
       );
@@ -736,44 +755,78 @@ export default function MyAgents() {
                         {agent.description}
                       </p>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {agents.map((agent, index) => (
-                          <motion.div key={agent.id}>
-                            {/* Other agent card content */}
-
-                            {/* Add the networks section here */}
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {agent.networks &&
-                                agent.networks.map((network, idx) => (
-                                  <motion.span
-                                    key={idx}
-                                    className={`text-xs px-2 py-1 rounded-full ${
-                                      getNetworkColor(network) === "blue"
-                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                                        : getNetworkColor(network) === "purple"
-                                        ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
-                                        : getNetworkColor(network) === "green"
-                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                                        : getNetworkColor(network) === "red"
-                                        ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                                        : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                                    }`}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 300,
-                                    }}
-                                  >
-                                    {network}
-                                  </motion.span>
-                                ))}
-                            </div>
-
-                            {/* Continue with other agent card content */}
-                          </motion.div>
-                        ))}
+                      {/* Networks section */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {agent.networks &&
+                          agent.networks.map((network, idx) => (
+                            <motion.span
+                              key={idx}
+                              className={`text-xs px-2 py-1 rounded-full ${
+                                getNetworkColor(network) === "blue"
+                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                  : getNetworkColor(network) === "purple"
+                                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                                  : getNetworkColor(network) === "green"
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                  : getNetworkColor(network) === "red"
+                                  ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                  : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                              }`}
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.95 }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 300,
+                              }}
+                            >
+                              {network}
+                            </motion.span>
+                          ))}
                       </div>
+                      
+                      {/* MCPs section */}
+                      {agent.mcps && agent.mcps.length > 0 && (
+                        <div className="mt-3 mb-4">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">MCPs:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {agent.mcps.map((mcp, idx) => (
+                              <motion.div
+                                key={idx}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                                  mcp.color === "blue"
+                                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                    : mcp.color === "purple"
+                                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                                    : mcp.color === "green"
+                                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                    : mcp.color === "red"
+                                    ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                    : "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                                }`}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 300,
+                                }}
+                              >
+                                <div className="w-3 h-3 rounded-full overflow-hidden">
+                                  <Image 
+                                    src={mcp.name.includes("1inch") ? "/download.png" :
+                                         mcp.name.includes("google") ? "/download.jpeg" :
+                                         mcp.name.includes("twitter") ? "/Artboard-1twitter.webp" :
+                                         "/images.png"}
+                                    alt={mcp.name}
+                                    width={12}
+                                    height={12}
+                                  />
+                                </div>
+                                {mcp.name}
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Expanded view */}
                       <AnimatePresence>

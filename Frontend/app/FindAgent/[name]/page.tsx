@@ -21,9 +21,11 @@ import {
 } from "lucide-react";
 import NavBar from "../../components/NavBar";
 
-// API configuration
-const API_BASE_URL = "http://0.0.0.0:8001";
-const API_AUTH_HEADER = "Basic " + btoa("admin:password123");
+// API configuration from environment variables
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8001";
+const API_AUTH_HEADER = "Basic " + btoa(
+  `${process.env.NEXT_PUBLIC_API_USERNAME || "admin"}:${process.env.NEXT_PUBLIC_API_PASSWORD || "password123"}`
+);
 
 export default function AgentChat() {
   const params = useParams();
@@ -410,6 +412,25 @@ export default function AgentChat() {
                             <span className="font-medium text-gray-900 dark:text-white">Transactions, Monitoring</span>
                           </div>
                         </div>
+                        
+                        {/* MCPs Integration Section */}
+                        <div className="mt-3 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                          <span className="block text-gray-500 dark:text-gray-400 mb-2">Integrated MCPs</span>
+                          <div className="flex flex-wrap gap-2">
+                            {/* Hardcoded MCP based on the IPFS example, you would fetch this from agent data */}
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs">
+                              <div className="w-3 h-3 rounded-full overflow-hidden">
+                                <Image 
+                                  src="/download.png" 
+                                  alt="1inch MCP" 
+                                  width={12} 
+                                  height={12} 
+                                />
+                              </div>
+                              1inch-mcp
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -460,8 +481,8 @@ export default function AgentChat() {
                               h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-2" {...props} />,
                               h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2" {...props} />,
                               a: ({node, ...props}) => <a className="text-blue-400 underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                              code: ({node, inline, ...props}) => 
-                                inline 
+                              code: ({node, ...props}) => 
+                                true 
                                   ? <code className="bg-gray-800 px-1 py-0.5 rounded text-xs" {...props} />
                                   : <code className="block bg-gray-800 p-2 rounded my-2 text-xs overflow-x-auto" {...props} />,
                               pre: ({node, ...props}) => <pre className="bg-gray-800 p-0 rounded my-2 overflow-x-auto" {...props} />,

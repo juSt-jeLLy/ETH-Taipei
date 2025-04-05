@@ -1,7 +1,7 @@
 // context/index.tsx
 'use client'
 
-import { wagmiAdapter, projectId } from '../config'
+import { wagmiAdapter, projectId, polygonAmoy } from '../config'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createAppKit } from '@reown/appkit/react' 
 import { mainnet, arbitrum, avalanche, base, optimism, polygon, sepolia } from '@reown/appkit/networks'
@@ -27,7 +27,7 @@ const metadata = {
 export const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [mainnet, arbitrum, avalanche, base, optimism, polygon, sepolia],
+  networks: [mainnet, arbitrum, avalanche, base, optimism, polygon, sepolia, polygonAmoy],
   defaultNetwork: sepolia,
   metadata: metadata,
   features: {

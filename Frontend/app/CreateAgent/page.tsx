@@ -29,27 +29,12 @@ const mcpOptions = [
     description: "DeFi integration",
     color: "green",
   },
-
-  {
-    id: 2,
-    name: "claude-code-mcp",
-    icon: "/images.png",
-    description: "Code generation and analysis",
-    color: "purple",
-  },
   {
     id: 3,
     name: "google-maps",
     icon: "/download.jpeg",
     description: "Location and mapping services",
     color: "indigo",
-  },
-  {
-    id: 4,
-    name: "desktop-commander",
-    icon: "/image1.jpeg",
-    description: "Desktop automation",
-    color: "red",
   },
   {
     id: 5,
@@ -549,35 +534,73 @@ export default function CreateAgent() {
                       initial={{ opacity: 0.9 }}
                       whileHover={{
                         scale: 1.03,
-                        y: -2,
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-                        backgroundColor: selectedMCPs.includes(mcp.id)
-                          ? `rgba(${
-                              mcp.color === "blue"
-                                ? "239, 246, 255"
+                        y: -3,
+                        boxShadow: selectedMCPs.includes(mcp.id)
+                          ? `0 8px 16px rgba(${
+                              mcp.color === "blue" 
+                                ? "59, 130, 246, 0.2"
                                 : mcp.color === "purple"
-                                ? "243, 232, 255"
+                                ? "139, 92, 246, 0.2"
                                 : mcp.color === "green"
-                                ? "236, 253, 245"
+                                ? "16, 185, 129, 0.2"
                                 : mcp.color === "red"
-                                ? "254, 242, 242"
-                                : "238, 242, 255"
-                            }, 0.3)`
-                          : "rgba(249, 250, 251, 0.8)",
+                                ? "239, 68, 68, 0.2"
+                                : "99, 102, 241, 0.2"
+                            })`
+                          : "0 8px 16px rgba(0, 0, 0, 0.08)",
+                        backgroundColor: selectedMCPs.includes(mcp.id)
+                          ? mcp.color === "blue"
+                            ? "#93C5FD" // Darker blue - bg-blue-300
+                            : mcp.color === "purple"
+                            ? "#C4B5FD" // Darker purple - bg-purple-300
+                            : mcp.color === "green"
+                            ? "#6EE7B7" // Darker green - bg-green-300
+                            : mcp.color === "red"
+                            ? "#FCA5A5" // Darker red - bg-red-300
+                            : "#A5B4FC" // Darker indigo - bg-indigo-300
+                          : mcp.color === "blue"
+                            ? "#60A5FA" // Even darker blue on hover - bg-blue-400
+                            : mcp.color === "purple"
+                            ? "#A78BFA" // Even darker purple on hover - bg-purple-400
+                            : mcp.color === "green"
+                            ? "#34D399" // Even darker green on hover - bg-green-400
+                            : mcp.color === "red"
+                            ? "#F87171" // Even darker red on hover - bg-red-400
+                            : "#818CF8", // Even darker indigo on hover - bg-indigo-400
                       }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggleMCP(mcp.id)}
                       onMouseEnter={() => setHoveringMCP(mcp.id)}
                       onMouseLeave={() => setHoveringMCP(null)}
-                      className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-300 ${
+                      className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-300 backdrop-blur-sm ${
                         selectedMCPs.includes(mcp.id)
-                          ? "border-gray-400 dark:border-blue-700 bg-gray-50 dark:bg-gray-800/80"
-                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800/50"
+                          ? mcp.color === "blue"
+                            ? "border-blue-400 dark:border-blue-700 bg-blue-50/40 dark:bg-blue-900/20 shadow-blue-100 dark:shadow-blue-900/30 shadow-md" 
+                            : mcp.color === "purple"
+                            ? "border-purple-400 dark:border-purple-700 bg-purple-50/40 dark:bg-purple-900/20 shadow-purple-100 dark:shadow-purple-900/30 shadow-md"
+                            : mcp.color === "green"
+                            ? "border-green-400 dark:border-green-700 bg-green-50/40 dark:bg-green-900/20 shadow-green-100 dark:shadow-green-900/30 shadow-md"
+                            : mcp.color === "red"
+                            ? "border-red-400 dark:border-red-700 bg-red-50/40 dark:bg-red-900/20 shadow-red-100 dark:shadow-red-900/30 shadow-md"
+                            : "border-indigo-400 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/20 shadow-indigo-100 dark:shadow-indigo-900/30 shadow-md"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800/50 shadow-sm hover:shadow-md"
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1">
                         <motion.div
-                          className="w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 p-1"
+                          className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center p-1 ${
+                            selectedMCPs.includes(mcp.id)
+                              ? mcp.color === "blue"
+                                ? "bg-blue-100 dark:bg-blue-900/50"
+                                : mcp.color === "purple"
+                                ? "bg-purple-100 dark:bg-purple-900/50"
+                                : mcp.color === "green"
+                                ? "bg-green-100 dark:bg-green-900/50"
+                                : mcp.color === "red"
+                                ? "bg-red-100 dark:bg-red-900/50"
+                                : "bg-indigo-100 dark:bg-indigo-900/50"
+                              : "bg-gray-100 dark:bg-gray-700"
+                          }`}
                           animate={{
                             rotate:
                               selectedMCPs.includes(mcp.id) ||
@@ -586,13 +609,35 @@ export default function CreateAgent() {
                                 : 0,
                             scale: selectedMCPs.includes(mcp.id)
                               ? [1, 1.1, 1]
+                              : hoveringMCP === mcp.id
+                              ? 1.08
                               : 1,
                             boxShadow: selectedMCPs.includes(mcp.id)
-                              ? [
-                                  "0 0 0 0 rgba(59, 130, 246, 0)",
-                                  "0 0 0 4px rgba(59, 130, 246, 0.1)",
-                                  "0 0 0 0 rgba(59, 130, 246, 0)",
-                                ]
+                              ? mcp.color === "blue"
+                                ? [
+                                    "0 0 0 0 rgba(59, 130, 246, 0)",
+                                    "0 0 0 4px rgba(59, 130, 246, 0.2)",
+                                    "0 0 0 0 rgba(59, 130, 246, 0)",
+                                  ]
+                                : mcp.color === "purple"
+                                ? [
+                                    "0 0 0 0 rgba(139, 92, 246, 0)",
+                                    "0 0 0 4px rgba(139, 92, 246, 0.2)",
+                                    "0 0 0 0 rgba(139, 92, 246, 0)",
+                                  ]
+                                : mcp.color === "green"
+                                ? [
+                                    "0 0 0 0 rgba(16, 185, 129, 0)",
+                                    "0 0 0 4px rgba(16, 185, 129, 0.2)",
+                                    "0 0 0 0 rgba(16, 185, 129, 0)",
+                                  ]
+                                : [
+                                    "0 0 0 0 rgba(59, 130, 246, 0)",
+                                    "0 0 0 4px rgba(59, 130, 246, 0.2)",
+                                    "0 0 0 0 rgba(59, 130, 246, 0)",
+                                  ]
+                              : hoveringMCP === mcp.id
+                              ? "0 0 0 2px rgba(209, 213, 219, 0.4)"
                               : "none",
                           }}
                           transition={{
@@ -609,16 +654,36 @@ export default function CreateAgent() {
                         </motion.div>
                         <div>
                           <motion.div
-                            className={`font-medium text-base ${
-                              mcp.color === "blue"
-                                ? "text-blue-600 dark:text-blue-400"
-                                : mcp.color === "purple"
-                                ? "text-purple-600 dark:text-purple-400"
-                                : mcp.color === "green"
-                                ? "text-green-600 dark:text-green-400"
-                                : mcp.color === "red"
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-indigo-600 dark:text-indigo-400"
+                            className={`font-semibold text-base ${
+                              selectedMCPs.includes(mcp.id)
+                                ? mcp.color === "blue"
+                                  ? "text-blue-900 dark:text-white"
+                                  : mcp.color === "purple"
+                                  ? "text-purple-900 dark:text-white"
+                                  : mcp.color === "green"
+                                  ? "text-green-900 dark:text-white"
+                                  : mcp.color === "red"
+                                  ? "text-red-900 dark:text-white"
+                                  : "text-indigo-900 dark:text-white"
+                                : hoveringMCP === mcp.id
+                                  ? mcp.color === "blue"
+                                    ? "text-blue-950 dark:text-white"
+                                    : mcp.color === "purple"
+                                    ? "text-purple-950 dark:text-white"
+                                    : mcp.color === "green"
+                                    ? "text-green-950 dark:text-white"
+                                    : mcp.color === "red"
+                                    ? "text-red-950 dark:text-white"
+                                    : "text-indigo-950 dark:text-white"
+                                  : mcp.color === "blue"
+                                    ? "text-blue-700 dark:text-blue-300"
+                                    : mcp.color === "purple"
+                                    ? "text-purple-700 dark:text-purple-300"
+                                    : mcp.color === "green"
+                                    ? "text-green-700 dark:text-green-300"
+                                    : mcp.color === "red"
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-indigo-700 dark:text-indigo-300"
                             }`}
                             animate={{
                               scale: selectedMCPs.includes(mcp.id)
@@ -638,7 +703,13 @@ export default function CreateAgent() {
                           >
                             {mcp.name}
                           </motion.div>
-                          <div className="text-sm text-gray-500 dark:text-gray-300">
+                          <div className={`text-sm ${
+                            selectedMCPs.includes(mcp.id)
+                              ? "text-gray-800 dark:text-gray-100"
+                              : hoveringMCP === mcp.id
+                                ? "text-gray-900 dark:text-white"
+                                : "text-gray-500 dark:text-gray-300"
+                          }`}>
                             {mcp.description}
                           </div>
                         </div>

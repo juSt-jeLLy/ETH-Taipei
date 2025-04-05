@@ -34,8 +34,8 @@ export default function NavBar() {
 
   // Handle clicks outside the dropdown to close it
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    function handleClickOutside(event: any) {
+      if (dropdownRef.current) {
         setWalletDropdownOpen(false);
       }
     }
@@ -76,7 +76,7 @@ export default function NavBar() {
   }, [isConnected, address]);
 
   // Function to handle My Agents link click
-  const handleMyAgentsClick = (e) => {
+  const handleMyAgentsClick = (e: any) => {
     if (!walletConnected) {
       e.preventDefault();
       setShowWalletToast(true);
@@ -123,7 +123,7 @@ export default function NavBar() {
   }, [isConnected]);
 
   // Format wallet address for display
-  const formatWalletAddress = (address) => {
+  const formatWalletAddress = (address: any) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(
       address.length - 4
@@ -433,7 +433,7 @@ export default function NavBar() {
                   href: walletConnected ? "/MyAgents" : "#",
                   label: "Agents",
                   needsWallet: true,
-                  onClick: (e) => {
+                  onClick: (e: any) => {
                     setMobileMenuOpen(false);
                     handleMyAgentsClick(e);
                   },

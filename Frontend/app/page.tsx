@@ -496,6 +496,7 @@ export default function Home() {
                 }}
                 className="bg-gray-50 dark:bg-gray-800 p-8 rounded-xl border border-gray-100 dark:border-gray-700 transition-all duration-300 transform hover:scale-105"
                 style={{
+                  // @ts-ignore - CSS variables
                   "--hover-bg": "rgba(249, 250, 251, 1)",
                   "--hover-border": "rgba(229, 231, 235, 1)"
                 }}
